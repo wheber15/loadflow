@@ -125,7 +125,10 @@ const TruckDetailsPage = () => {
      SUBMIT PALLET
   ========================= */
   const submitPallet =
-    async () => {
+    async (
+      deliveryValue,
+      customerValue
+    ) => {
       try {
         await api.post(
           '/pallets/scan',
@@ -133,8 +136,10 @@ const TruckDetailsPage = () => {
             palletCode:
               pendingPallet,
             truckId: truck._id,
-            deliveryNumber,
-            customerName,
+            deliveryNumber:
+              deliveryValue,
+            customerName:
+              customerValue,
           }
         );
 
@@ -759,7 +764,10 @@ const TruckDetailsPage = () => {
               false
             );
 
-            submitPallet();
+            submitPallet(
+              deliveryNumber,
+              value
+            );
           }}
         />
       )}

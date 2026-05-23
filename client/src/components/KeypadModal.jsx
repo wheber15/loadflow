@@ -16,6 +16,7 @@ const letters = [
   'S','T','U',
   'V','W','X',
   'Y','Z',
+  'SPACE',
 ];
 
 const KeypadModal = ({
@@ -82,9 +83,13 @@ const KeypadModal = ({
         <div className="grid grid-cols-3 gap-3 max-h-[420px] overflow-y-auto pr-1">
           {letters.map((char) => (
             <button
-              key={char}
+              key={char === 'SPACE' ? 'SPACE' : char}
               onClick={() =>
-                addChar(char)
+                addChar(
+                  char === 'SPACE'
+                    ? ' '
+                    : char
+                )
               }
               className="bg-zinc-900 hover:bg-orange-500 active:scale-95 transition-all h-16 rounded-2xl text-2xl font-black"
             >
