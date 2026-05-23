@@ -5,244 +5,311 @@ import Truck from '../models/Truck.js';
 import Delivery from '../models/Delivery.js';
 
 /* =========================
-   UPDATE TRUCK STATUS
+   SAFE BARCODE VALIDATION
 ========================= */
-const updateTruckStatus = async (
-  truckId
+const validateBarcode = (
+  palletCode
 ) => {
-  const truck =
-    await Truck.findById(truckId);
-
-  if (!truck) return;
-
-  const deliveries =
-    await Delivery.find({
-      truckId,
-    });
-
-  const totalFloor =
-    deliveries.reduce(
-      (sum, d) =>
-        sum + d.floorPallets,
-      0
-    );
-
-  const totalBulk =
-    deliveries.reduce(
-      (sum, d) =>
-        sum + d.bulkPallets,
-      0
-    );
-
-  const totalLoaded =
-    deliveries.reduce(
-      (sum, d) =>
-        sum + d.loadedPallets,
-      0
-    );
-
-  truck.floorReadyCount =
-    totalFloor;
-
-  truck.bulkWaitingCount =
-    totalBulk;
-
-  truck.loadedCount =
-    totalLoaded;
-
-  truck.deliveryCount =
-    deliveries.length;
-
-  const totalActive =
-    totalFloor + totalBulk;
-
-  if (totalActive === 0) {
-    truck.status = 'EMPTY';
-  } else if (totalBulk > 0) {
-    truck.status =
-      'WAITING_BULK';
-  } else if (
-    totalFloor >=
-    truck.maxPallets
-  ) {
-    truck.status =
-      'FLOOR_READY';
+  if (!palletCode) {
+    return false;
   }
 
-  if (
-    totalLoaded >=
-    truck.maxPallets
-  ) {
-    truck.status =
-      'COMPLETE';
+  /* REMOVE SPACES */
+  const cleaned =
+    palletCode
+      .toString()
+      .replace(/\s/g, '');
+
+  /* SAP LABELS SHOULD BE NUMERIC */
+  if (!/^\d+$/.test(cleaned)) {
+    return false;
   }
 
-  await truck.save();
+  /* EXPECTED LENGTH */
+  if (cleaned.length < 16) {
+    return false;
+  }
+
+  return cleaned;
 };
 
 /* =========================
-   SCAN FLOOR PALLET
+   SAFE LAST 4
 ========================= */
-export const scanPallet = async (
-  req,
-  res
+const getLast4Digits = (
+  palletCode
 ) => {
-  try {
-    const {
-      palletCode,
-      truckId,
-      deliveryNumber,
-      customerName,
-    } = req.body;
+  const cleaned =
+    palletCode
+      .toString()
+      .replace(/\s/g, '');
 
-    if (
-      !palletCode ||
-      !truckId ||
-      !deliveryNumber ||
-      !customerName
-    ) {
-      return res.status(400).json({
-        message:
-          'Missing required fields',
-      });
-    }
+  return cleaned.substring(
+    cleaned.length - 4
+  );
+};
 
-    const existingPallet =
-      await Pallet.findOne({
-        palletCode,
-      });
-
-    if (existingPallet) {
-      return res.status(400).json({
-        message:
-          'Pallet already exists in system',
-      });
-    }
-
+/* =========================
+   UPDATE TRUCK STATUS
+========================= */
+const updateTruckStatus =
+  async (truckId) => {
     const truck =
       await Truck.findById(
         truckId
       );
 
-    if (!truck) {
-      return res.status(404).json({
-        message: 'Truck not found',
-      });
-    }
+    if (!truck) return;
 
-    if (
-      truck.status ===
-        'LOADING' ||
-      truck.status ===
-        'COMPLETE' ||
-      truck.status ===
-        'DISPATCHED'
-    ) {
-      return res.status(400).json({
-        message:
-          'Truck locked for scanning',
-      });
-    }
-
-    const totalPallets =
-      await Pallet.countDocuments({
+    const deliveries =
+      await Delivery.find({
         truckId,
       });
 
-    if (
-      totalPallets >=
+    const totalFloor =
+      deliveries.reduce(
+        (sum, d) =>
+          sum + d.floorPallets,
+        0
+      );
+
+    const totalBulk =
+      deliveries.reduce(
+        (sum, d) =>
+          sum + d.bulkPallets,
+        0
+      );
+
+    const totalLoaded =
+      deliveries.reduce(
+        (sum, d) =>
+          sum + d.loadedPallets,
+        0
+      );
+
+    truck.floorReadyCount =
+      totalFloor;
+
+    truck.bulkWaitingCount =
+      totalBulk;
+
+    truck.loadedCount =
+      totalLoaded;
+
+    truck.deliveryCount =
+      deliveries.length;
+
+    const totalActive =
+      totalFloor + totalBulk;
+
+    if (totalActive === 0) {
+      truck.status = 'EMPTY';
+    } else if (
+      totalBulk > 0
+    ) {
+      truck.status =
+        'WAITING_BULK';
+    } else if (
+      totalFloor >=
       truck.maxPallets
     ) {
-      return res.status(400).json({
-        message:
-          'Truck already full',
-      });
-    }
-
-    const last4Digits =
-      palletCode.slice(-4);
-
-    let delivery =
-      await Delivery.findOne({
-        truckId,
-        deliveryNumber,
-      });
-
-    if (!delivery) {
-      delivery =
-        await Delivery.create({
-          deliveryNumber,
-          customerName,
-          truckId,
-          totalPallets: 0,
-          floorPallets: 0,
-          bulkPallets: 0,
-          loadedPallets: 0,
-          status: 'BUILDING',
-        });
-    }
-
-    const pallet =
-      await Pallet.create({
-        palletCode,
-        last4Digits,
-        deliveryNumber,
-        customerName,
-        deliveryId:
-          delivery._id,
-        truckId,
-        palletType: 'FLOOR',
-        status: 'READY',
-      });
-
-    delivery.totalPallets += 1;
-
-    delivery.floorPallets += 1;
-
-    if (
-      delivery.bulkPallets === 0
-    ) {
-      delivery.status =
+      truck.status =
         'FLOOR_READY';
     }
 
-    await delivery.save();
+    if (
+      totalLoaded >=
+      truck.maxPallets
+    ) {
+      truck.status =
+        'COMPLETE';
+    }
 
-    await updateTruckStatus(
-      truckId
-    );
+    await truck.save();
 
-    const io = req.app.get('io');
+    return truck;
+  };
 
-    io.emit(
-      'pallet:scanned',
-      pallet
-    );
+/* =========================
+   SCAN FLOOR PALLET
+========================= */
+export const scanPallet =
+  async (req, res) => {
+    try {
+      let {
+        palletCode,
+        truckId,
+        deliveryNumber,
+        customerName,
+      } = req.body;
 
-    io.emit(
-      'delivery:updated',
-      delivery
-    );
+      palletCode =
+        validateBarcode(
+          palletCode
+        );
 
-    io.emit(
-      'truck:updated',
-      truck
-    );
+      if (!palletCode) {
+        return res.status(400).json({
+          message:
+            'Invalid barcode scan. Please rescan pallet.',
+        });
+      }
 
-    res.status(201).json({
-      pallet,
-      delivery,
-      message:
-        'Pallet scanned successfully',
-    });
-  } catch (error) {
-    console.log(error);
+      if (
+        !truckId ||
+        !deliveryNumber ||
+        !customerName
+      ) {
+        return res.status(400).json({
+          message:
+            'Missing required fields',
+        });
+      }
 
-    res.status(500).json({
-      message: error.message,
-    });
-  }
-};
+      const existingPallet =
+        await Pallet.findOne({
+          palletCode,
+        });
+
+      if (existingPallet) {
+        return res.status(400).json({
+          message:
+            'Pallet already exists in system',
+        });
+      }
+
+      const truck =
+        await Truck.findById(
+          truckId
+        );
+
+      if (!truck) {
+        return res.status(404).json({
+          message:
+            'Truck not found',
+        });
+      }
+
+      if (
+        [
+          'LOADING',
+          'COMPLETE',
+          'DISPATCHED',
+        ].includes(
+          truck.status
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            'Truck locked for scanning',
+        });
+      }
+
+      const totalPallets =
+        await Pallet.countDocuments(
+          {
+            truckId,
+          }
+        );
+
+      if (
+        totalPallets >=
+        truck.maxPallets
+      ) {
+        return res.status(400).json({
+          message:
+            'Truck already full',
+        });
+      }
+
+      const last4Digits =
+        getLast4Digits(
+          palletCode
+        );
+
+      let delivery =
+        await Delivery.findOne({
+          truckId,
+          deliveryNumber,
+        });
+
+      if (!delivery) {
+        delivery =
+          await Delivery.create({
+            deliveryNumber,
+            customerName,
+            truckId,
+            totalPallets: 0,
+            floorPallets: 0,
+            bulkPallets: 0,
+            loadedPallets: 0,
+            status: 'BUILDING',
+          });
+      }
+
+      const pallet =
+        await Pallet.create({
+          palletCode,
+          last4Digits,
+          deliveryNumber,
+          customerName,
+          deliveryId:
+            delivery._id,
+          truckId,
+          palletType: 'FLOOR',
+          status: 'READY',
+        });
+
+      delivery.totalPallets += 1;
+      delivery.floorPallets += 1;
+
+      if (
+        delivery.bulkPallets === 0
+      ) {
+        delivery.status =
+          'FLOOR_READY';
+      }
+
+      await delivery.save();
+
+      const updatedTruck =
+        await updateTruckStatus(
+          truckId
+        );
+
+      const io =
+        req.app.get('io');
+
+      io.emit(
+        'pallet:scanned',
+        pallet
+      );
+
+      io.emit(
+        'delivery:updated',
+        delivery
+      );
+
+      io.emit(
+        'truck:updated',
+        updatedTruck
+      );
+
+      res.status(201).json({
+        pallet,
+        delivery,
+        message:
+          'Pallet scanned successfully',
+      });
+    } catch (error) {
+      console.log(error);
+
+      res.status(500).json({
+        message:
+          error.message,
+      });
+    }
+  };
 
 /* =========================
    SCAN BULK PALLET
@@ -250,20 +317,21 @@ export const scanPallet = async (
 export const scanBulkPallet =
   async (req, res) => {
     try {
-      const {
+      let {
         palletCode,
         truckId,
         deliveryNumber,
       } = req.body;
 
-      if (
-        !palletCode ||
-        !truckId ||
-        !deliveryNumber
-      ) {
+      palletCode =
+        validateBarcode(
+          palletCode
+        );
+
+      if (!palletCode) {
         return res.status(400).json({
           message:
-            'Missing required fields',
+            'Invalid barcode scan',
         });
       }
 
@@ -293,7 +361,9 @@ export const scanBulkPallet =
       }
 
       const last4Digits =
-        palletCode.slice(-4);
+        getLast4Digits(
+          palletCode
+        );
 
       const pallet =
         await Pallet.create({
@@ -310,17 +380,16 @@ export const scanBulkPallet =
         });
 
       delivery.bulkPallets += 1;
-
       delivery.totalPallets += 1;
-
       delivery.status =
         'WAITING_BULK';
 
       await delivery.save();
 
-      await updateTruckStatus(
-        truckId
-      );
+      const updatedTruck =
+        await updateTruckStatus(
+          truckId
+        );
 
       const io =
         req.app.get('io');
@@ -335,6 +404,11 @@ export const scanBulkPallet =
         delivery
       );
 
+      io.emit(
+        'truck:updated',
+        updatedTruck
+      );
+
       res.status(201).json({
         pallet,
         delivery,
@@ -345,7 +419,8 @@ export const scanBulkPallet =
       console.log(error);
 
       res.status(500).json({
-        message: error.message,
+        message:
+          error.message,
       });
     }
   };
@@ -392,9 +467,10 @@ export const markBulkArrived =
 
       await delivery.save();
 
-      await updateTruckStatus(
-        delivery.truckId
-      );
+      const updatedTruck =
+        await updateTruckStatus(
+          delivery.truckId
+        );
 
       const io =
         req.app.get('io');
@@ -404,6 +480,11 @@ export const markBulkArrived =
         delivery
       );
 
+      io.emit(
+        'truck:updated',
+        updatedTruck
+      );
+
       res.json({
         message:
           'Bulk pallets moved to floor',
@@ -411,7 +492,8 @@ export const markBulkArrived =
       });
     } catch (error) {
       res.status(500).json({
-        message: error.message,
+        message:
+          error.message,
       });
     }
   };
@@ -432,7 +514,8 @@ export const startLoading =
 
       if (!truck) {
         return res.status(404).json({
-          message: 'Truck not found',
+          message:
+            'Truck not found',
         });
       }
 
@@ -456,7 +539,8 @@ export const startLoading =
         });
       }
 
-      truck.status = 'LOADING';
+      truck.status =
+        'LOADING';
 
       await truck.save();
 
@@ -475,7 +559,8 @@ export const startLoading =
       });
     } catch (error) {
       res.status(500).json({
-        message: error.message,
+        message:
+          error.message,
       });
     }
   };
@@ -486,8 +571,20 @@ export const startLoading =
 export const loadPallet =
   async (req, res) => {
     try {
-      const { palletCode } =
+      let { palletCode } =
         req.body;
+
+      palletCode =
+        validateBarcode(
+          palletCode
+        );
+
+      if (!palletCode) {
+        return res.status(400).json({
+          message:
+            'Invalid barcode',
+        });
+      }
 
       const pallet =
         await Pallet.findOne({
@@ -533,7 +630,8 @@ export const loadPallet =
         });
       }
 
-      pallet.status = 'LOADED';
+      pallet.status =
+        'LOADED';
 
       pallet.loadedAt =
         new Date();
@@ -559,28 +657,10 @@ export const loadPallet =
         await delivery.save();
       }
 
-      const totalLoaded =
-        await Pallet.countDocuments(
-          {
-            truckId:
-              truck._id,
-            status: 'LOADED',
-          }
+      const updatedTruck =
+        await updateTruckStatus(
+          truck._id
         );
-
-      if (
-        totalLoaded >=
-        truck.maxPallets
-      ) {
-        truck.status =
-          'COMPLETE';
-
-        await truck.save();
-      }
-
-      await updateTruckStatus(
-        truck._id
-      );
 
       const io =
         req.app.get('io');
@@ -592,7 +672,7 @@ export const loadPallet =
 
       io.emit(
         'truck:updated',
-        truck
+        updatedTruck
       );
 
       res.json({
@@ -602,7 +682,8 @@ export const loadPallet =
       });
     } catch (error) {
       res.status(500).json({
-        message: error.message,
+        message:
+          error.message,
       });
     }
   };
@@ -624,7 +705,8 @@ export const getTruckPallets =
       res.json(pallets);
     } catch (error) {
       res.status(500).json({
-        message: error.message,
+        message:
+          error.message,
       });
     }
   };
@@ -646,7 +728,8 @@ export const getTruckDeliveries =
       res.json(deliveries);
     } catch (error) {
       res.status(500).json({
-        message: error.message,
+        message:
+          error.message,
       });
     }
   };
