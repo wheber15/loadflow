@@ -4,9 +4,9 @@ import express from 'express';
 
 import {
   scanPallet,
+  scanBulkPallet,
   getTruckPallets,
   loadPallet,
-  addBulkPallets,
   markBulkArrived,
   startLoading,
   getTruckDeliveries,
@@ -23,6 +23,14 @@ router.post(
 );
 
 /* =========================
+   SCAN BULK PALLET
+========================= */
+router.post(
+  '/bulk-scan',
+  scanBulkPallet
+);
+
+/* =========================
    LOAD PALLET
 ========================= */
 router.post(
@@ -36,14 +44,6 @@ router.post(
 router.post(
   '/start-loading',
   startLoading
-);
-
-/* =========================
-   ADD BULK PALLETS
-========================= */
-router.post(
-  '/bulk',
-  addBulkPallets
 );
 
 /* =========================

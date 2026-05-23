@@ -1,73 +1,73 @@
-import mongoose from 'mongoose';
+// routes/palletRoutes.js
 
-const palletSchema =
-  new mongoose.Schema(
-    {
-      palletCode: {
-        type: String,
-        required: true,
-        unique: true,
-        index: true,
-      },
+import express from 'express';
 
-      last4Digits: {
-        type: String,
-      },
+import {
+  scanPallet,
+  scanBulkPallet,
+  getTruckPallets,
+  loadPallet,
+  markBulkArrived,
+  startLoading,
+  getTruckDeliveries,
+} from '../controllers/palletController.js';
 
-      deliveryNumber: {
-        type: String,
-        required: true,
-      },
+const router = express.Router();
 
-      customerName: {
-        type: String,
-        required: true,
-      },
-
-      deliveryId: {
-        type:
-          mongoose.Schema.Types.ObjectId,
-        ref: 'Delivery',
-      },
-
-      truckId: {
-        type:
-          mongoose.Schema.Types.ObjectId,
-        ref: 'Truck',
-      },
-
-      palletType: {
-        type: String,
-        enum: ['FLOOR', 'BULK'],
-        default: 'FLOOR',
-      },
-
-      status: {
-        type: String,
-        enum: [
-          'SCANNED',
-          'READY',
-          'LOADING',
-          'LOADED',
-        ],
-        default: 'SCANNED',
-      },
-
-      scannedAt: {
-        type: Date,
-        default: Date.now,
-      },
-
-      loadedAt: {
-        type: Date,
-      },
-    },
-    {
-      timestamps: true,
-    }
-  );
-
-export default mongoose.model(
-  'Pallet',
-  palletSchema
+/* =========================
+   SCAN FLOOR PALLET
+========================= */
+router.post(
+  '/scan',
+  scanPallet
 );
+
+/* =========================
+   SCAN BULK PALLET
+========================= */
+router.post(
+  '/bulk-scan',
+  scanBulkPallet
+);
+
+/* =========================
+   LOAD PALLET
+========================= */
+router.post(
+  '/load',
+  loadPallet
+);
+
+/* =========================
+   START LOADING
+========================= */
+router.post(
+  '/start-loading',
+  startLoading
+);
+
+/* =========================
+   BULK ARRIVED
+========================= */
+router.post(
+  '/bulk-arrived',
+  markBulkArrived
+);
+
+/* =========================
+   GET TRUCK PALLETS
+========================= */
+router.get(
+  '/truck/:truckId',
+  getTruckPallets
+);
+
+/* =========================
+   GET TRUCK DELIVERIES
+========================= */
+router.get(
+  '/deliveries/:truckId',
+  getTruckDeliveries
+);
+
+export default router;

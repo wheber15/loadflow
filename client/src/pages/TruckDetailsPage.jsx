@@ -39,14 +39,11 @@ const TruckDetailsPage = () => {
   const [loadingMode, setLoadingMode] =
     useState(false);
 
-  const [showBulkModal, setShowBulkModal] =
+  const [bulkMode, setBulkMode] =
     useState(false);
 
   const [selectedDelivery, setSelectedDelivery] =
     useState(null);
-
-  const [bulkQty, setBulkQty] =
-    useState(1);
 
   const [showDeliveryPad, setShowDeliveryPad] =
     useState(false);
@@ -82,6 +79,8 @@ const TruckDetailsPage = () => {
         'LOADING'
       ) {
         setLoadingMode(true);
+      } else {
+        setLoadingMode(false);
       }
     } catch (error) {
       console.error(error);
@@ -122,7 +121,7 @@ const TruckDetailsPage = () => {
     };
 
   /* =========================
-     SUBMIT PALLET
+     SUBMIT FLOOR PALLET
   ========================= */
   const submitPallet =
     async (
@@ -180,7 +179,9 @@ const TruckDetailsPage = () => {
     try {
       navigator.vibrate?.(100);
 
-      /* LOADING MODE */
+      /* =========================
+         LOADING MODE
+      ========================= */
       if (loadingMode) {
         await api.post(
           '/pallets/load',
@@ -207,12 +208,48 @@ const TruckDetailsPage = () => {
         return;
       }
 
-      /* SAVE PALLET */
+      /* =========================
+         BULK MODE
+      ========================= */
+      if (bulkMode) {
+        await api.post(
+          '/pallets/bulk-scan',
+          {
+            palletCode,
+            truckId: truck._id,
+            deliveryNumber:
+              selectedDelivery.deliveryNumber,
+          }
+        );
+
+        toast.success(
+          `Bulk pallet ${palletCode.slice(
+            -4
+          )} scanned`
+        );
+
+        fetchTruck();
+
+        fetchPallets();
+
+        fetchDeliveries();
+
+        setBulkMode(false);
+
+        setSelectedDelivery(null);
+
+        setShowScanner(false);
+
+        return;
+      }
+
+      /* =========================
+         FLOOR MODE
+      ========================= */
       setPendingPallet(
         palletCode
       );
 
-      /* OPEN DELIVERY PAD */
       setShowDeliveryPad(true);
     } catch (error) {
       navigator.vibrate?.([
@@ -230,35 +267,32 @@ const TruckDetailsPage = () => {
   };
 
   /* =========================
-     ADD BULK
+     BULK ARRIVED
   ========================= */
-  const addBulkPallets =
-    async () => {
+  const markBulkReady =
+    async (deliveryId) => {
       try {
         await api.post(
-          '/pallets/bulk',
+          '/pallets/bulk-arrived',
           {
-            truckId: truck._id,
-            deliveryNumber:
-              selectedDelivery.deliveryNumber,
-            quantity: bulkQty,
+            deliveryId,
           }
         );
 
         toast.success(
-          'Bulk pallets added'
+          'Bulk pallets moved to floor'
         );
 
-        setShowBulkModal(false);
+        fetchTruck();
+
+        fetchPallets();
 
         fetchDeliveries();
-
-        fetchTruck();
       } catch (error) {
         toast.error(
           error.response?.data
             ?.message ||
-            'Bulk add failed'
+            'Failed to update bulk pallets'
         );
       }
     };
@@ -526,7 +560,7 @@ const TruckDetailsPage = () => {
         </div>
       </div>
 
-      {/* DELIVERY GROUPS */}
+      {/* DELIVERIES */}
       <div className="p-4">
         <h2 className="text-3xl font-black mb-4">
           Deliveries
@@ -575,6 +609,7 @@ const TruckDetailsPage = () => {
                   </div>
                 </div>
 
+                {/* PALLETS */}
                 <div className="mt-5 grid grid-cols-2 gap-3">
                   {pallets
                     .filter(
@@ -589,11 +624,16 @@ const TruckDetailsPage = () => {
                           pallet.status ===
                           'LOADED'
                             ? 'bg-green-500/10 border-green-500'
+                            : pallet.palletType ===
+                              'BULK'
+                            ? 'bg-yellow-500/10 border-yellow-500'
                             : 'bg-zinc-800 border-zinc-700'
                         }`}
                       >
                         <p className="text-zinc-500 text-xs">
-                          PALLET
+                          {
+                            pallet.palletType
+                          }
                         </p>
 
                         <h3 className="text-3xl font-black text-orange-500 mt-1">
@@ -608,6 +648,9 @@ const TruckDetailsPage = () => {
                             pallet.status ===
                             'LOADED'
                               ? 'text-green-400'
+                              : pallet.palletType ===
+                                'BULK'
+                              ? 'text-yellow-400'
                               : 'text-orange-400'
                           }`}
                         >
@@ -623,6 +666,7 @@ const TruckDetailsPage = () => {
                     ))}
                 </div>
 
+                {/* COUNTS */}
                 <div className="grid grid-cols-3 gap-3 mt-5">
                   <div className="bg-zinc-800 rounded-2xl p-3">
                     <p className="text-zinc-500 text-xs">
@@ -661,21 +705,40 @@ const TruckDetailsPage = () => {
                   </div>
                 </div>
 
+                {/* ACTIONS */}
                 {!loadingMode && (
-                  <button
-                    onClick={() => {
-                      setSelectedDelivery(
-                        delivery
-                      );
+                  <div className="grid grid-cols-2 gap-3 mt-5">
+                    <button
+                      onClick={() => {
+                        setSelectedDelivery(
+                          delivery
+                        );
 
-                      setShowBulkModal(
-                        true
-                      );
-                    }}
-                    className="w-full mt-5 bg-yellow-500 hover:bg-yellow-600 text-black py-4 rounded-2xl font-black text-xl"
-                  >
-                    ADD BULK
-                  </button>
+                        setBulkMode(true);
+
+                        setShowScanner(
+                          true
+                        );
+                      }}
+                      className="bg-yellow-500 hover:bg-yellow-600 text-black py-4 rounded-2xl font-black text-xl"
+                    >
+                      SCAN BULK
+                    </button>
+
+                    {delivery.bulkPallets >
+                      0 && (
+                      <button
+                        onClick={() =>
+                          markBulkReady(
+                            delivery._id
+                          )
+                        }
+                        className="bg-orange-500 hover:bg-orange-600 py-4 rounded-2xl font-black text-xl"
+                      >
+                        BULK ARRIVED
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )
@@ -714,16 +777,20 @@ const TruckDetailsPage = () => {
           className={`w-full py-7 rounded-3xl text-4xl font-black ${
             loadingMode
               ? 'bg-green-600'
+              : bulkMode
+              ? 'bg-yellow-500 text-black'
               : 'bg-orange-500'
           }`}
         >
           {loadingMode
             ? 'VERIFY & LOAD'
+            : bulkMode
+            ? 'SCAN BULK'
             : 'SCAN PALLET'}
         </button>
       </div>
 
-      {/* DELIVERY PAD */}
+      {/* DELIVERY NUMBER */}
       {showDeliveryPad && (
         <KeypadModal
           title="DELIVERY NUMBER"
@@ -747,7 +814,7 @@ const TruckDetailsPage = () => {
         />
       )}
 
-      {/* CUSTOMER PAD */}
+      {/* CUSTOMER */}
       {showCustomerPad && (
         <KeypadModal
           title="CUSTOMER NAME"
@@ -776,54 +843,16 @@ const TruckDetailsPage = () => {
       {showScanner && (
         <PalletScanner
           onScan={handleScan}
-          onClose={() =>
-            setShowScanner(false)
-          }
+          onClose={() => {
+            setShowScanner(false);
+
+            setBulkMode(false);
+
+            setSelectedDelivery(
+              null
+            );
+          }}
         />
-      )}
-
-      {/* BULK MODAL */}
-      {showBulkModal && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 rounded-3xl p-6 w-full max-w-md border border-zinc-800">
-            <h2 className="text-3xl font-black mb-5">
-              ADD BULK PALLETS
-            </h2>
-
-            <input
-              type="number"
-              value={bulkQty}
-              onChange={(e) =>
-                setBulkQty(
-                  e.target.value
-                )
-              }
-              className="w-full bg-zinc-800 rounded-2xl p-5 text-3xl font-black"
-            />
-
-            <div className="grid grid-cols-2 gap-3 mt-5">
-              <button
-                onClick={() =>
-                  setShowBulkModal(
-                    false
-                  )
-                }
-                className="bg-zinc-800 py-4 rounded-2xl font-black"
-              >
-                CANCEL
-              </button>
-
-              <button
-                onClick={
-                  addBulkPallets
-                }
-                className="bg-yellow-500 text-black py-4 rounded-2xl font-black"
-              >
-                ADD
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

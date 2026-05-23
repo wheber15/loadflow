@@ -1,3 +1,5 @@
+// controllers/palletController.js
+
 import Pallet from '../models/Pallet.js';
 import Truck from '../models/Truck.js';
 import Delivery from '../models/Delivery.js';
@@ -39,7 +41,6 @@ const updateTruckStatus = async (
       0
     );
 
-  /* LIVE COUNTS */
   truck.floorReadyCount =
     totalFloor;
 
@@ -55,19 +56,12 @@ const updateTruckStatus = async (
   const totalActive =
     totalFloor + totalBulk;
 
-  /* EMPTY */
   if (totalActive === 0) {
     truck.status = 'EMPTY';
-  }
-
-  /* WAITING BULK */
-  else if (totalBulk > 0) {
+  } else if (totalBulk > 0) {
     truck.status =
       'WAITING_BULK';
-  }
-
-  /* FLOOR READY */
-  else if (
+  } else if (
     totalFloor >=
     truck.maxPallets
   ) {
@@ -75,7 +69,6 @@ const updateTruckStatus = async (
       'FLOOR_READY';
   }
 
-  /* COMPLETE */
   if (
     totalLoaded >=
     truck.maxPallets
@@ -102,7 +95,6 @@ export const scanPallet = async (
       customerName,
     } = req.body;
 
-    /* VALIDATION */
     if (
       !palletCode ||
       !truckId ||
@@ -115,7 +107,6 @@ export const scanPallet = async (
       });
     }
 
-    /* DUPLICATE */
     const existingPallet =
       await Pallet.findOne({
         palletCode,
@@ -128,7 +119,6 @@ export const scanPallet = async (
       });
     }
 
-    /* TRUCK */
     const truck =
       await Truck.findById(
         truckId
@@ -140,7 +130,6 @@ export const scanPallet = async (
       });
     }
 
-    /* BLOCK IF LOADING */
     if (
       truck.status ===
         'LOADING' ||
@@ -155,7 +144,6 @@ export const scanPallet = async (
       });
     }
 
-    /* TOTAL PALLETS */
     const totalPallets =
       await Pallet.countDocuments({
         truckId,
@@ -171,18 +159,15 @@ export const scanPallet = async (
       });
     }
 
-    /* LAST 4 */
     const last4Digits =
       palletCode.slice(-4);
 
-    /* FIND DELIVERY */
     let delivery =
       await Delivery.findOne({
         truckId,
         deliveryNumber,
       });
 
-    /* CREATE DELIVERY */
     if (!delivery) {
       delivery =
         await Delivery.create({
@@ -197,7 +182,6 @@ export const scanPallet = async (
         });
     }
 
-    /* CREATE PALLET */
     const pallet =
       await Pallet.create({
         palletCode,
@@ -211,12 +195,10 @@ export const scanPallet = async (
         status: 'READY',
       });
 
-    /* UPDATE DELIVERY */
     delivery.totalPallets += 1;
 
     delivery.floorPallets += 1;
 
-    /* DELIVERY READY */
     if (
       delivery.bulkPallets === 0
     ) {
@@ -226,12 +208,10 @@ export const scanPallet = async (
 
     await delivery.save();
 
-    /* UPDATE TRUCK */
     await updateTruckStatus(
       truckId
     );
 
-    /* SOCKET */
     const io = req.app.get('io');
 
     io.emit(
@@ -249,7 +229,6 @@ export const scanPallet = async (
       truck
     );
 
-    /* RESPONSE */
     res.status(201).json({
       pallet,
       delivery,
@@ -266,16 +245,39 @@ export const scanPallet = async (
 };
 
 /* =========================
-   ADD BULK PALLETS
+   SCAN BULK PALLET
 ========================= */
-export const addBulkPallets =
+export const scanBulkPallet =
   async (req, res) => {
     try {
       const {
+        palletCode,
         truckId,
         deliveryNumber,
-        quantity,
       } = req.body;
+
+      if (
+        !palletCode ||
+        !truckId ||
+        !deliveryNumber
+      ) {
+        return res.status(400).json({
+          message:
+            'Missing required fields',
+        });
+      }
+
+      const existingPallet =
+        await Pallet.findOne({
+          palletCode,
+        });
+
+      if (existingPallet) {
+        return res.status(400).json({
+          message:
+            'Pallet already exists in system',
+        });
+      }
 
       const delivery =
         await Delivery.findOne({
@@ -290,11 +292,26 @@ export const addBulkPallets =
         });
       }
 
-      delivery.bulkPallets +=
-        Number(quantity);
+      const last4Digits =
+        palletCode.slice(-4);
 
-      delivery.totalPallets +=
-        Number(quantity);
+      const pallet =
+        await Pallet.create({
+          palletCode,
+          last4Digits,
+          deliveryNumber,
+          customerName:
+            delivery.customerName,
+          deliveryId:
+            delivery._id,
+          truckId,
+          palletType: 'BULK',
+          status: 'BULK',
+        });
+
+      delivery.bulkPallets += 1;
+
+      delivery.totalPallets += 1;
 
       delivery.status =
         'WAITING_BULK';
@@ -309,16 +326,24 @@ export const addBulkPallets =
         req.app.get('io');
 
       io.emit(
+        'pallet:scanned',
+        pallet
+      );
+
+      io.emit(
         'delivery:updated',
         delivery
       );
 
-      res.json({
-        message:
-          'Bulk pallets added',
+      res.status(201).json({
+        pallet,
         delivery,
+        message:
+          'Bulk pallet scanned successfully',
       });
     } catch (error) {
+      console.log(error);
+
       res.status(500).json({
         message: error.message,
       });
@@ -345,6 +370,17 @@ export const markBulkArrived =
             'Delivery not found',
         });
       }
+
+      await Pallet.updateMany(
+        {
+          deliveryId,
+          palletType: 'BULK',
+          status: 'BULK',
+        },
+        {
+          status: 'READY',
+        }
+      );
 
       delivery.floorPallets +=
         delivery.bulkPallets;
@@ -400,7 +436,6 @@ export const startLoading =
         });
       }
 
-      /* MUST BE READY */
       if (
         truck.floorReadyCount <
         truck.maxPallets
@@ -478,7 +513,6 @@ export const loadPallet =
         });
       }
 
-      /* MUST BE LOADING */
       if (
         truck.status !==
         'LOADING'
@@ -489,7 +523,6 @@ export const loadPallet =
         });
       }
 
-      /* ALREADY LOADED */
       if (
         pallet.status ===
         'LOADED'
@@ -507,7 +540,6 @@ export const loadPallet =
 
       await pallet.save();
 
-      /* DELIVERY */
       const delivery =
         await Delivery.findById(
           pallet.deliveryId
@@ -516,7 +548,6 @@ export const loadPallet =
       if (delivery) {
         delivery.loadedPallets += 1;
 
-        /* COMPLETE DELIVERY */
         if (
           delivery.loadedPallets >=
           delivery.totalPallets
@@ -528,7 +559,6 @@ export const loadPallet =
         await delivery.save();
       }
 
-      /* AUTO COMPLETE TRUCK */
       const totalLoaded =
         await Pallet.countDocuments(
           {
