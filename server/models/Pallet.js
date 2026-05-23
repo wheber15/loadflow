@@ -1,73 +1,106 @@
-// routes/palletRoutes.js
+// models/Pallet.js
 
-import express from 'express';
+import mongoose from 'mongoose';
 
-import {
-  scanPallet,
-  scanBulkPallet,
-  getTruckPallets,
-  loadPallet,
-  markBulkArrived,
-  startLoading,
-  getTruckDeliveries,
-} from '../controllers/palletController.js';
+const palletSchema =
+  new mongoose.Schema(
+    {
+      palletCode: {
+        type: String,
+        required: true,
+        unique: true,
+        index: true,
+      },
 
-const router = express.Router();
+      last4Digits: {
+        type: String,
+      },
+
+      deliveryNumber: {
+        type: String,
+        required: true,
+        index: true,
+      },
+
+      customerName: {
+        type: String,
+        required: true,
+      },
+
+      deliveryId: {
+        type:
+          mongoose.Schema.Types.ObjectId,
+        ref: 'Delivery',
+      },
+
+      truckId: {
+        type:
+          mongoose.Schema.Types.ObjectId,
+        ref: 'Truck',
+      },
+
+      palletType: {
+        type: String,
+        enum: [
+          'FLOOR',
+          'BULK',
+        ],
+        default: 'FLOOR',
+      },
+
+      status: {
+        type: String,
+        enum: [
+          'SCANNED',
+          'BULK',
+          'READY',
+          'LOADING',
+          'LOADED',
+        ],
+        default: 'SCANNED',
+      },
+
+      scannedAt: {
+        type: Date,
+        default: Date.now,
+      },
+
+      bulkArrivedAt: {
+        type: Date,
+      },
+
+      loadingStartedAt: {
+        type: Date,
+      },
+
+      loadedAt: {
+        type: Date,
+      },
+    },
+    {
+      timestamps: true,
+    }
+  );
 
 /* =========================
-   SCAN FLOOR PALLET
+   AUTO LAST 4 DIGITS
 ========================= */
-router.post(
-  '/scan',
-  scanPallet
+palletSchema.pre(
+  'save',
+  function (next) {
+    if (
+      this.palletCode &&
+      !this.last4Digits
+    ) {
+      this.last4Digits =
+        this.palletCode.slice(-4);
+    }
+
+    next();
+  }
 );
 
-/* =========================
-   SCAN BULK PALLET
-========================= */
-router.post(
-  '/bulk-scan',
-  scanBulkPallet
+export default mongoose.model(
+  'Pallet',
+  palletSchema
 );
-
-/* =========================
-   LOAD PALLET
-========================= */
-router.post(
-  '/load',
-  loadPallet
-);
-
-/* =========================
-   START LOADING
-========================= */
-router.post(
-  '/start-loading',
-  startLoading
-);
-
-/* =========================
-   BULK ARRIVED
-========================= */
-router.post(
-  '/bulk-arrived',
-  markBulkArrived
-);
-
-/* =========================
-   GET TRUCK PALLETS
-========================= */
-router.get(
-  '/truck/:truckId',
-  getTruckPallets
-);
-
-/* =========================
-   GET TRUCK DELIVERIES
-========================= */
-router.get(
-  '/deliveries/:truckId',
-  getTruckDeliveries
-);
-
-export default router;
