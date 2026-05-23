@@ -82,15 +82,6 @@ const DashboardPage = () => {
       fetchTrucks
     );
 
-    socket.on(
-      'truck:complete',
-      () => {
-        navigator.vibrate?.(
-          300
-        );
-      }
-    );
-
     return () => {
       socket.off(
         'pallet:scanned'
@@ -102,10 +93,6 @@ const DashboardPage = () => {
 
       socket.off(
         'truck:updated'
-      );
-
-      socket.off(
-        'truck:complete'
       );
     };
   }, []);
@@ -157,7 +144,7 @@ const DashboardPage = () => {
 
     if (
       truck.status ===
-      'FLOOR READY'
+      'FLOOR_READY'
     ) {
       return {
         badge:
@@ -192,7 +179,7 @@ const DashboardPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
+    <div className="min-h-screen bg-black text-white p-4 md:p-6">
       {/* HEADER */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -211,20 +198,22 @@ const DashboardPage = () => {
           }
           className="bg-orange-500 hover:bg-orange-600 transition px-6 py-4 rounded-2xl font-bold shadow-lg"
         >
-          + Create Truck
+          + NEW LOAD
         </button>
       </div>
 
-      {/* GRID */}
+      {/* TRUCK GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {trucks.map((truck) => {
+          const styles =
+            getStatusStyles(
+              truck
+            );
+
           const progress =
             (truck.loadedCount /
               truck.maxPallets) *
             100;
-
-          const styles =
-            getStatusStyles(truck);
 
           return (
             <div
@@ -234,53 +223,98 @@ const DashboardPage = () => {
                   `/truck/${truck._id}`
                 )
               }
-              className={`bg-zinc-900 rounded-2xl p-5 border border-zinc-800 cursor-pointer ${styles.border} hover:scale-[1.02] transition-all duration-200`}
+              className={`bg-zinc-900 rounded-3xl p-5 border border-zinc-800 cursor-pointer transition-all duration-200 ${styles.border}`}
             >
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">
-                  {truck.truckNumber}
-                </h2>
+                <div>
+                  <h2 className="text-4xl font-black">
+                    TRUCK{' '}
+                    {
+                      truck.truckNumber
+                    }
+                  </h2>
+
+                  <p className="text-zinc-500 mt-2">
+                    {
+                      truck.routeName
+                    }
+                  </p>
+
+                  <p className="text-xs text-zinc-600 mt-1">
+                    {
+                      truck.loadId
+                    }
+                  </p>
+                </div>
 
                 <span
-                  className={`${styles.badge} px-3 py-1 rounded-full text-sm font-semibold`}
+                  className={`px-4 py-2 rounded-full text-sm font-black ${styles.badge}`}
                 >
                   {truck.status}
                 </span>
               </div>
 
-              <p className="text-zinc-400 mt-3">
-                Route:{' '}
-                {truck.routeName}
-              </p>
+              {/* COUNTS */}
+              <div className="grid grid-cols-3 gap-3 mt-6">
+                <div className="bg-zinc-800 rounded-2xl p-3">
+                  <p className="text-zinc-500 text-xs">
+                    READY
+                  </p>
 
-              <div className="mt-5">
+                  <h3 className="text-2xl font-black text-orange-500 mt-1">
+                    {
+                      truck.floorReadyCount
+                    }
+                  </h3>
+                </div>
+
+                <div className="bg-zinc-800 rounded-2xl p-3">
+                  <p className="text-zinc-500 text-xs">
+                    BULK
+                  </p>
+
+                  <h3 className="text-2xl font-black text-yellow-400 mt-1">
+                    {
+                      truck.bulkWaitingCount
+                    }
+                  </h3>
+                </div>
+
+                <div className="bg-zinc-800 rounded-2xl p-3">
+                  <p className="text-zinc-500 text-xs">
+                    LOADED
+                  </p>
+
+                  <h3 className="text-2xl font-black text-green-400 mt-1">
+                    {
+                      truck.loadedCount
+                    }
+                  </h3>
+                </div>
+              </div>
+
+              {/* PROGRESS */}
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-zinc-500 text-sm">
+                    Loading Progress
+                  </p>
+
+                  <p className="text-sm font-bold">
+                    {
+                      truck.loadedCount
+                    }
+                    /{truck.maxPallets}
+                  </p>
+                </div>
+
                 <div className="w-full bg-zinc-800 rounded-full h-4 overflow-hidden">
                   <div
-                    className={`${styles.progress} h-full transition-all duration-500`}
+                    className={`${styles.progress} h-full transition-all`}
                     style={{
                       width: `${progress}%`,
                     }}
                   />
-                </div>
-
-                <div className="flex items-center justify-between mt-2">
-                  <p className="text-sm text-zinc-500">
-                    {
-                      truck.loadedCount
-                    }{' '}
-                    /{' '}
-                    {
-                      truck.maxPallets
-                    }{' '}
-                    loaded
-                  </p>
-
-                  <p className="text-sm font-bold text-zinc-400">
-                    {Math.round(
-                      progress
-                    )}
-                    %
-                  </p>
                 </div>
               </div>
             </div>
@@ -288,6 +322,7 @@ const DashboardPage = () => {
         })}
       </div>
 
+      {/* MODAL */}
       {showModal && (
         <CreateTruckModal
           onClose={() =>
