@@ -1,6 +1,6 @@
 // src/components/truck/PalletScanner.jsx
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import {
   Html5QrcodeScanner,
@@ -10,6 +10,8 @@ const PalletScanner = ({
   onScan,
   onClose,
 }) => {
+  const scannedRef = useRef(false);
+
   useEffect(() => {
     let scanner;
 
@@ -19,11 +21,11 @@ const PalletScanner = ({
           new Html5QrcodeScanner(
             'reader',
             {
-              fps: 10,
+              fps: 5,
 
               qrbox: {
-                width: 320,
-                height: 180,
+                width: 340,
+                height: 200,
               },
 
               aspectRatio: 1.777,
@@ -33,19 +35,45 @@ const PalletScanner = ({
               supportedScanTypes: [0],
 
               showTorchButtonIfSupported: true,
+
+              experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true,
+              },
             },
             false
           );
 
         scanner.render(
           async (decodedText) => {
-            navigator.vibrate?.(100);
+            /* BLOCK DOUBLE/TRIPLE READS */
+            if (scannedRef.current)
+              return;
+
+            scannedRef.current = true;
+
+            navigator.vibrate?.(120);
+
+            /* CLEAN INPUT */
+            const cleanCode =
+              decodedText
+                .replace(/\s/g, '')
+                .trim();
+
+            /* VALIDATE LENGTH */
+            if (
+              cleanCode.length < 20
+            ) {
+              scannedRef.current =
+                false;
+
+              return;
+            }
 
             try {
               await scanner.clear();
             } catch {}
 
-            onScan(decodedText);
+            onScan(cleanCode);
           },
 
           () => {}
@@ -62,6 +90,8 @@ const PalletScanner = ({
     startScanner();
 
     return () => {
+      scannedRef.current = false;
+
       if (scanner) {
         scanner
           .clear()
@@ -111,19 +141,19 @@ const PalletScanner = ({
 
           <ul className="mt-3 text-zinc-400 space-y-2 text-sm">
             <li>
-              • Hold camera 15cm away
+              • Hold steady for 1 second
             </li>
 
             <li>
-              • Keep barcode fully inside frame
+              • Fill scan frame fully
             </li>
 
             <li>
-              • Avoid shadows/reflections
+              • Avoid reflections
             </li>
 
             <li>
-              • Scanner auto-detects CODE128
+              • CODE128 optimized
             </li>
           </ul>
         </div>
