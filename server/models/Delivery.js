@@ -1,3 +1,5 @@
+// models/Delivery.js
+
 import mongoose from 'mongoose';
 
 const deliverySchema = new mongoose.Schema(
@@ -23,12 +25,28 @@ const deliverySchema = new mongoose.Schema(
       default: 0,
     },
 
+    /* =========================
+       FLOOR PALLETS READY
+    ========================= */
     floorPallets: {
       type: Number,
       default: 0,
     },
 
+    /* =========================
+       EXPECTED BULK PALLETS
+       (what warehouse expects)
+    ========================= */
     bulkPallets: {
+      type: Number,
+      default: 0,
+    },
+
+    /* =========================
+       ACTUAL BULK SCANNED
+       (physically arrived)
+    ========================= */
+    scannedBulkPallets: {
       type: Number,
       default: 0,
     },
@@ -38,6 +56,9 @@ const deliverySchema = new mongoose.Schema(
       default: 0,
     },
 
+    /* =========================
+       DELIVERY STATUS
+    ========================= */
     status: {
       type: String,
       enum: [
