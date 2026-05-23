@@ -1,59 +1,102 @@
 import mongoose from 'mongoose';
 
-const truckSchema = new mongoose.Schema(
-  {
-    truckNumber: {
-      type: String,
-      required: true,
-      unique: true,
-    },
+const truckSchema =
+  new mongoose.Schema(
+    {
+      /* INTERNAL LOAD ID */
+      loadId: {
+        type: String,
+        unique: true,
+      },
 
-    routeName: {
-      type: String,
-      required: true,
-    },
+      /* VISIBLE TRUCK NUMBER */
+      truckNumber: {
+        type: Number,
+        required: true,
+      },
 
-    maxPallets: {
-      type: Number,
-      default: 26,
-    },
+      routeName: {
+        type: String,
+        required: true,
+      },
 
-    deliveryCount: {
-      type: Number,
-      default: 0,
-    },
+      shiftDate: {
+        type: String,
+        default: () => {
+          return new Date()
+            .toISOString()
+            .split('T')[0];
+        },
+      },
 
-    floorReadyCount: {
-      type: Number,
-      default: 0,
-    },
+      maxPallets: {
+        type: Number,
+        default: 26,
+      },
 
-    bulkWaitingCount: {
-      type: Number,
-      default: 0,
-    },
+      deliveryCount: {
+        type: Number,
+        default: 0,
+      },
 
-    loadedCount: {
-      type: Number,
-      default: 0,
-    },
+      floorReadyCount: {
+        type: Number,
+        default: 0,
+      },
 
-    status: {
-      type: String,
-      enum: [
-        'EMPTY',
-        'BUILDING',
-        'WAITING_BULK',
-        'FLOOR_READY',
-        'LOADING',
-        'COMPLETE',
-        'DISPATCHED',
-      ],
-      default: 'EMPTY',
+      bulkWaitingCount: {
+        type: Number,
+        default: 0,
+      },
+
+      loadedCount: {
+        type: Number,
+        default: 0,
+      },
+
+      status: {
+        type: String,
+        enum: [
+          'EMPTY',
+          'BUILDING',
+          'WAITING_BULK',
+          'FLOOR_READY',
+          'LOADING',
+          'COMPLETE',
+          'DISPATCHED',
+        ],
+        default: 'BUILDING',
+      },
+
+      dispatchedAt: {
+        type: Date,
+      },
     },
-  },
-  {
-    timestamps: true,
+    {
+      timestamps: true,
+    }
+  );
+
+/* GENERATE LOAD ID */
+truckSchema.pre(
+  'save',
+  async function (next) {
+    if (!this.loadId) {
+      const date = new Date()
+        .toISOString()
+        .slice(0, 10)
+        .replace(/-/g, '');
+
+      const random =
+        Math.floor(
+          1000 +
+            Math.random() * 9000
+        );
+
+      this.loadId = `LF-${date}-${random}`;
+    }
+
+    next();
   }
 );
 

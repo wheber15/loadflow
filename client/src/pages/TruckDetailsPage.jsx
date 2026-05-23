@@ -26,20 +26,31 @@ const TruckDetailsPage = () => {
   const [pallets, setPallets] =
     useState([]);
 
+  const [deliveries, setDeliveries] =
+    useState([]);
+
   const [showScanner, setShowScanner] =
     useState(false);
 
   const [loadingMode, setLoadingMode] =
     useState(false);
 
+  const [showBulkModal, setShowBulkModal] =
+    useState(false);
+
+  const [selectedDelivery, setSelectedDelivery] =
+    useState(null);
+
+  const [bulkQty, setBulkQty] =
+    useState(1);
+
   /* =========================
      FETCH TRUCK
   ========================= */
   const fetchTruck = async () => {
     try {
-      const { data } = await api.get(
-        '/trucks'
-      );
+      const { data } =
+        await api.get('/trucks');
 
       const foundTruck = data.find(
         (t) => t._id === id
@@ -63,9 +74,10 @@ const TruckDetailsPage = () => {
   ========================= */
   const fetchPallets = async () => {
     try {
-      const { data } = await api.get(
-        `/pallets/truck/${id}`
-      );
+      const { data } =
+        await api.get(
+          `/pallets/truck/${id}`
+        );
 
       setPallets(data);
     } catch (error) {
@@ -74,14 +86,43 @@ const TruckDetailsPage = () => {
   };
 
   /* =========================
+     FETCH DELIVERIES
+  ========================= */
+  const fetchDeliveries =
+    async () => {
+      try {
+        const { data } =
+          await api.get(
+            `/pallets/deliveries/${id}`
+          );
+
+        setDeliveries(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+  /* =========================
      HANDLE SCAN
   ========================= */
   const handleScan = async (
     palletCode
   ) => {
     try {
-      /* VIBRATION */
       navigator.vibrate?.(100);
+
+      /* DEMO DELIVERY PARSER */
+      const deliveryNumber =
+        prompt(
+          'Enter Delivery Number'
+        );
+
+      const customerName =
+        prompt(
+          'Enter Customer Name'
+        );
+
+      if (!deliveryNumber) return;
 
       /* LOADING MODE */
       if (loadingMode) {
@@ -99,12 +140,13 @@ const TruckDetailsPage = () => {
           )} LOADED`
         );
       } else {
-        /* BUILDING MODE */
         await api.post(
           '/pallets/scan',
           {
             palletCode,
             truckId: truck._id,
+            deliveryNumber,
+            customerName,
           }
         );
 
@@ -115,7 +157,11 @@ const TruckDetailsPage = () => {
         );
       }
 
+      fetchTruck();
+
       fetchPallets();
+
+      fetchDeliveries();
 
       setShowScanner(false);
     } catch (error) {
@@ -126,11 +172,75 @@ const TruckDetailsPage = () => {
       ]);
 
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           'Scan failed'
       );
     }
   };
+
+  /* =========================
+     ADD BULK
+  ========================= */
+  const addBulkPallets =
+    async () => {
+      try {
+        await api.post(
+          '/pallets/bulk',
+          {
+            truckId: truck._id,
+            deliveryNumber:
+              selectedDelivery.deliveryNumber,
+            quantity: bulkQty,
+          }
+        );
+
+        toast.success(
+          'Bulk pallets added'
+        );
+
+        setShowBulkModal(false);
+
+        fetchDeliveries();
+
+        fetchTruck();
+      } catch (error) {
+        toast.error(
+          error.response?.data
+            ?.message ||
+            'Bulk add failed'
+        );
+      }
+    };
+
+  /* =========================
+     START LOADING
+  ========================= */
+  const startLoading =
+    async () => {
+      try {
+        await api.post(
+          '/pallets/start-loading',
+          {
+            truckId: truck._id,
+          }
+        );
+
+        toast.success(
+          'Loading started'
+        );
+
+        setLoadingMode(true);
+
+        fetchTruck();
+      } catch (error) {
+        toast.error(
+          error.response?.data
+            ?.message ||
+            'Cannot start loading'
+        );
+      }
+    };
 
   /* =========================
      SOCKET EVENTS
@@ -140,40 +250,42 @@ const TruckDetailsPage = () => {
 
     fetchPallets();
 
+    fetchDeliveries();
+
     socket.on(
       'pallet:scanned',
       () => {
-        fetchPallets();
         fetchTruck();
+
+        fetchPallets();
+
+        fetchDeliveries();
       }
     );
 
     socket.on(
       'pallet:loaded',
       () => {
-        fetchPallets();
         fetchTruck();
+
+        fetchPallets();
+
+        fetchDeliveries();
+      }
+    );
+
+    socket.on(
+      'delivery:updated',
+      () => {
+        fetchTruck();
+
+        fetchDeliveries();
       }
     );
 
     socket.on(
       'truck:updated',
       () => {
-        fetchTruck();
-      }
-    );
-
-    socket.on(
-      'truck:complete',
-      () => {
-        navigator.vibrate?.(
-          500
-        );
-
-        toast.success(
-          'TRUCK COMPLETE'
-        );
-
         fetchTruck();
       }
     );
@@ -188,11 +300,11 @@ const TruckDetailsPage = () => {
       );
 
       socket.off(
-        'truck:updated'
+        'delivery:updated'
       );
 
       socket.off(
-        'truck:complete'
+        'truck:updated'
       );
     };
   }, []);
@@ -200,21 +312,19 @@ const TruckDetailsPage = () => {
   if (!truck) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p className="text-2xl">
-          Loading Truck...
-        </p>
+        Loading...
       </div>
     );
   }
 
-  const progress =
-    (pallets.length /
-      truck.maxPallets) *
-    100;
-
   const loadedCount = pallets.filter(
     (p) => p.status === 'LOADED'
   ).length;
+
+  const progress =
+    (truck.floorReadyCount /
+      truck.maxPallets) *
+    100;
 
   const loadingProgress =
     (loadedCount /
@@ -222,292 +332,353 @@ const TruckDetailsPage = () => {
     100;
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
+    <div className="min-h-screen bg-black text-white pb-40">
       <Toaster position="top-center" />
 
-      {/* BACK */}
-      <button
-        onClick={() => navigate('/')}
-        className="mb-6 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-5 py-3 rounded-2xl font-bold transition"
-      >
-        ← Back
-      </button>
+      {/* TOP */}
+      <div className="sticky top-0 z-40 bg-black border-b border-zinc-800 p-4">
+        <button
+          onClick={() =>
+            navigate('/')
+          }
+          className="mb-4 bg-zinc-900 px-4 py-3 rounded-2xl"
+        >
+          ← Back
+        </button>
 
-      {/* HEADER */}
-      <div className="mb-8">
-        <h1 className="text-5xl font-black text-orange-500">
-          {truck.truckNumber}
-        </h1>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-5xl font-black text-orange-500">
+              {
+                truck.truckNumber
+              }
+            </h1>
 
-        <p className="text-2xl text-zinc-300 mt-3">
-          Route: {truck.routeName}
-        </p>
+            <p className="text-zinc-400 text-xl mt-2">
+              {truck.routeName}
+            </p>
+          </div>
 
-        <div className="mt-3">
-          <p className="text-sm text-zinc-500">
-            Truck ID
-          </p>
-
-          <p className="text-zinc-300 font-mono break-all">
-            {truck._id}
-          </p>
-        </div>
-
-        <div className="mt-4 inline-flex">
-          <span className="bg-orange-500/20 text-orange-400 px-4 py-2 rounded-full font-bold">
+          <div
+            className={`px-5 py-3 rounded-2xl font-black ${
+              truck.status ===
+              'COMPLETE'
+                ? 'bg-green-500'
+                : truck.status ===
+                  'LOADING'
+                ? 'bg-blue-500'
+                : truck.status ===
+                  'WAITING_BULK'
+                ? 'bg-yellow-500 text-black'
+                : 'bg-orange-500'
+            }`}
+          >
             {truck.status}
-          </span>
+          </div>
         </div>
       </div>
 
-      {/* SCANNED PROGRESS */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">
-            Scanned Pallets
+      {/* STATS */}
+      <div className="grid grid-cols-2 gap-4 p-4">
+        <div className="bg-zinc-900 rounded-3xl p-5 border border-zinc-800">
+          <p className="text-zinc-500 text-sm">
+            FLOOR READY
+          </p>
+
+          <h2 className="text-4xl font-black text-orange-500 mt-2">
+            {
+              truck.floorReadyCount
+            }
           </h2>
-
-          <span className="text-orange-500 text-3xl font-black">
-            {pallets.length} /{' '}
-            {truck.maxPallets}
-          </span>
         </div>
 
-        <div className="w-full bg-zinc-800 rounded-full h-5 overflow-hidden">
-          <div
-            className="bg-orange-500 h-full transition-all"
-            style={{
-              width: `${progress}%`,
-            }}
-          />
-        </div>
-      </div>
+        <div className="bg-zinc-900 rounded-3xl p-5 border border-zinc-800">
+          <p className="text-zinc-500 text-sm">
+            BULK WAITING
+          </p>
 
-      {/* LOADED PROGRESS */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">
-            Loaded Pallets
+          <h2 className="text-4xl font-black text-yellow-400 mt-2">
+            {
+              truck.bulkWaitingCount
+            }
           </h2>
-
-          <span className="text-green-400 text-3xl font-black">
-            {loadedCount} /{' '}
-            {truck.maxPallets}
-          </span>
         </div>
 
-        <div className="w-full bg-zinc-800 rounded-full h-5 overflow-hidden">
-          <div
-            className="bg-green-500 h-full transition-all"
-            style={{
-              width: `${loadingProgress}%`,
-            }}
-          />
+        <div className="bg-zinc-900 rounded-3xl p-5 border border-zinc-800">
+          <p className="text-zinc-500 text-sm">
+            LOADED
+          </p>
+
+          <h2 className="text-4xl font-black text-green-400 mt-2">
+            {loadedCount}
+          </h2>
+        </div>
+
+        <div className="bg-zinc-900 rounded-3xl p-5 border border-zinc-800">
+          <p className="text-zinc-500 text-sm">
+            DELIVERIES
+          </p>
+
+          <h2 className="text-4xl font-black text-blue-400 mt-2">
+            {
+              deliveries.length
+            }
+          </h2>
         </div>
       </div>
 
-      {/* ACTION BUTTONS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        {/* FLOOR READY */}
-        <button
-          disabled={
-            pallets.length !==
-            truck.maxPallets
-          }
-          onClick={async () => {
-            try {
-              await api.patch(
-                `/trucks/${truck._id}/status`,
-                {
-                  status:
-                    'FLOOR READY',
-                }
-              );
+      {/* PROGRESS */}
+      <div className="px-4">
+        <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-800 mb-4">
+          <div className="flex justify-between mb-3">
+            <h2 className="text-2xl font-black">
+              FLOOR READY
+            </h2>
 
-              toast.success(
-                'Truck moved to FLOOR READY'
-              );
+            <span className="text-orange-500 font-black text-2xl">
+              {
+                truck.floorReadyCount
+              }
+              /{truck.maxPallets}
+            </span>
+          </div>
 
-              fetchTruck();
-            } catch {
-              toast.error(
-                'Status update failed'
-              );
-            }
-          }}
-          className={`py-5 rounded-2xl font-black text-xl transition ${
-            pallets.length ===
-            truck.maxPallets
-              ? 'bg-blue-600 hover:bg-blue-700'
-              : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-          }`}
-        >
-          FLOOR READY
-        </button>
+          <div className="w-full bg-zinc-800 rounded-full h-5 overflow-hidden">
+            <div
+              className="bg-orange-500 h-full"
+              style={{
+                width: `${progress}%`,
+              }}
+            />
+          </div>
+        </div>
 
-        {/* START LOADING */}
-        <button
-          onClick={async () => {
-            try {
-              await api.patch(
-                `/trucks/${truck._id}/status`,
-                {
-                  status:
-                    'LOADING',
-                }
-              );
+        <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-800">
+          <div className="flex justify-between mb-3">
+            <h2 className="text-2xl font-black">
+              LOADED
+            </h2>
 
-              setLoadingMode(true);
+            <span className="text-green-400 font-black text-2xl">
+              {loadedCount}/
+              {truck.maxPallets}
+            </span>
+          </div>
 
-              toast.success(
-                'Loading mode started'
-              );
-
-              fetchTruck();
-            } catch {
-              toast.error(
-                'Status update failed'
-              );
-            }
-          }}
-          className="bg-green-600 hover:bg-green-700 py-5 rounded-2xl font-black text-xl transition"
-        >
-          START LOADING
-        </button>
-
-        {/* DISPATCH */}
-        <button
-          disabled={
-            truck.status !==
-            'COMPLETE'
-          }
-          onClick={async () => {
-            try {
-              await api.patch(
-                `/trucks/${truck._id}/status`,
-                {
-                  status:
-                    'DISPATCHED',
-                }
-              );
-
-              toast.success(
-                'Truck dispatched'
-              );
-
-              fetchTruck();
-            } catch {
-              toast.error(
-                'Dispatch failed'
-              );
-            }
-          }}
-          className={`py-5 rounded-2xl font-black text-xl transition ${
-            truck.status ===
-            'COMPLETE'
-              ? 'bg-purple-600 hover:bg-purple-700'
-              : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-          }`}
-        >
-          DISPATCH
-        </button>
+          <div className="w-full bg-zinc-800 rounded-full h-5 overflow-hidden">
+            <div
+              className="bg-green-500 h-full"
+              style={{
+                width: `${loadingProgress}%`,
+              }}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* SCAN BUTTON */}
-      <div className="bg-zinc-900 rounded-3xl p-8 border border-zinc-800">
+      {/* DELIVERY GROUPS */}
+      <div className="p-4">
+        <h2 className="text-3xl font-black mb-4">
+          Deliveries
+        </h2>
+
+        <div className="space-y-4">
+          {deliveries.map(
+            (delivery) => (
+              <div
+                key={delivery._id}
+                className="bg-zinc-900 rounded-3xl p-5 border border-zinc-800"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-zinc-500 text-sm">
+                      DELIVERY
+                    </p>
+
+                    <h2 className="text-3xl font-black text-orange-500">
+                      {
+                        delivery.deliveryNumber
+                      }
+                    </h2>
+
+                    <p className="text-zinc-300 mt-2">
+                      {
+                        delivery.customerName
+                      }
+                    </p>
+                  </div>
+
+                  <div
+                    className={`px-4 py-2 rounded-xl font-bold ${
+                      delivery.status ===
+                      'COMPLETE'
+                        ? 'bg-green-500'
+                        : delivery.status ===
+                          'WAITING_BULK'
+                        ? 'bg-yellow-500 text-black'
+                        : 'bg-blue-500'
+                    }`}
+                  >
+                    {
+                      delivery.status
+                    }
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 mt-5">
+                  <div className="bg-zinc-800 rounded-2xl p-3">
+                    <p className="text-zinc-500 text-xs">
+                      FLOOR
+                    </p>
+
+                    <h3 className="text-2xl font-black text-orange-500 mt-2">
+                      {
+                        delivery.floorPallets
+                      }
+                    </h3>
+                  </div>
+
+                  <div className="bg-zinc-800 rounded-2xl p-3">
+                    <p className="text-zinc-500 text-xs">
+                      BULK
+                    </p>
+
+                    <h3 className="text-2xl font-black text-yellow-400 mt-2">
+                      {
+                        delivery.bulkPallets
+                      }
+                    </h3>
+                  </div>
+
+                  <div className="bg-zinc-800 rounded-2xl p-3">
+                    <p className="text-zinc-500 text-xs">
+                      LOADED
+                    </p>
+
+                    <h3 className="text-2xl font-black text-green-400 mt-2">
+                      {
+                        delivery.loadedPallets
+                      }
+                    </h3>
+                  </div>
+                </div>
+
+                {!loadingMode && (
+                  <button
+                    onClick={() => {
+                      setSelectedDelivery(
+                        delivery
+                      );
+
+                      setShowBulkModal(
+                        true
+                      );
+                    }}
+                    className="w-full mt-5 bg-yellow-500 hover:bg-yellow-600 text-black py-4 rounded-2xl font-black text-xl"
+                  >
+                    ADD BULK
+                  </button>
+                )}
+              </div>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* ACTION BAR */}
+      <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-zinc-800 p-4 space-y-3">
+        {!loadingMode && (
+          <button
+            disabled={
+              truck.bulkWaitingCount >
+                0 ||
+              truck.floorReadyCount <
+                truck.maxPallets
+            }
+            onClick={startLoading}
+            className={`w-full py-6 rounded-3xl text-3xl font-black ${
+              truck.bulkWaitingCount >
+                0 ||
+              truck.floorReadyCount <
+                truck.maxPallets
+                ? 'bg-zinc-800 text-zinc-500'
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
+          >
+            START LOADING
+          </button>
+        )}
+
         <button
           onClick={() =>
             setShowScanner(true)
           }
-          className={`w-full transition py-8 rounded-3xl text-3xl font-black shadow-lg ${
+          className={`w-full py-7 rounded-3xl text-4xl font-black ${
             loadingMode
-              ? 'bg-green-600 hover:bg-green-700'
-              : 'bg-orange-500 hover:bg-orange-600'
+              ? 'bg-green-600'
+              : 'bg-orange-500'
           }`}
         >
           {loadingMode
             ? 'VERIFY & LOAD'
             : 'SCAN PALLET'}
         </button>
-
-        <p className="text-center text-zinc-500 mt-4">
-          {loadingMode
-            ? 'Rescan pallets while loading trailer'
-            : 'Scan SAP pallet labels to assign pallets'}
-        </p>
       </div>
 
-      {/* CAMERA */}
+      {/* SCANNER */}
       {showScanner && (
-        <div className="mt-6">
-          <PalletScanner
-            onScan={handleScan}
-          />
-        </div>
+        <PalletScanner
+          onScan={handleScan}
+          onClose={() =>
+            setShowScanner(false)
+          }
+        />
       )}
 
-      {/* PALLETS */}
-      <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-3xl font-black">
-            Pallets
-          </h2>
+      {/* BULK MODAL */}
+      {showBulkModal && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 rounded-3xl p-6 w-full max-w-md border border-zinc-800">
+            <h2 className="text-3xl font-black mb-5">
+              ADD BULK PALLETS
+            </h2>
 
-          <span className="text-zinc-500">
-            {pallets.length} total
-          </span>
-        </div>
+            <input
+              type="number"
+              value={bulkQty}
+              onChange={(e) =>
+                setBulkQty(
+                  e.target.value
+                )
+              }
+              className="w-full bg-zinc-800 rounded-2xl p-5 text-3xl font-black"
+            />
 
-        {pallets.length === 0 ? (
-          <p className="text-zinc-500">
-            No pallets scanned yet
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {pallets.map((pallet) => (
-              <div
-                key={pallet._id}
-                className={`rounded-2xl p-4 border ${
-                  pallet.status ===
-                  'LOADED'
-                    ? 'bg-green-900 border-green-700'
-                    : 'bg-zinc-800 border-zinc-700'
-                }`}
+            <div className="grid grid-cols-2 gap-3 mt-5">
+              <button
+                onClick={() =>
+                  setShowBulkModal(
+                    false
+                  )
+                }
+                className="bg-zinc-800 py-4 rounded-2xl font-black"
               >
-                <p className="text-zinc-500 text-sm">
-                  PALLET
-                </p>
+                CANCEL
+              </button>
 
-                <h3 className="text-3xl font-black text-orange-500 mt-2">
-                  #
-                  {
-                    pallet.last4Digits
-                  }
-                </h3>
-
-                <p
-                  className={`mt-2 text-sm font-bold ${
-                    pallet.status ===
-                    'LOADED'
-                      ? 'text-green-400'
-                      : 'text-orange-400'
-                  }`}
-                >
-                  {pallet.status}
-                </p>
-
-                <p className="text-xs text-zinc-500 mt-3 break-all">
-                  {
-                    pallet.palletCode
-                  }
-                </p>
-              </div>
-            ))}
+              <button
+                onClick={
+                  addBulkPallets
+                }
+                className="bg-yellow-500 text-black py-4 rounded-2xl font-black"
+              >
+                ADD
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
-
 export default TruckDetailsPage;
