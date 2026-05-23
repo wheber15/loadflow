@@ -1,3 +1,5 @@
+// src/pages/TruckDetailsPage.jsx
+
 import { useEffect, useState } from 'react';
 
 import {
@@ -14,6 +16,8 @@ import api from '../api/axios';
 import socket from '../socket';
 
 import PalletScanner from '../components/truck/PalletScanner';
+
+import KeypadModal from '../components/KeypadModal';
 
 const TruckDetailsPage = () => {
   const { id } = useParams();
@@ -43,6 +47,21 @@ const TruckDetailsPage = () => {
 
   const [bulkQty, setBulkQty] =
     useState(1);
+
+  const [showDeliveryPad, setShowDeliveryPad] =
+    useState(false);
+
+  const [showCustomerPad, setShowCustomerPad] =
+    useState(false);
+
+  const [pendingPallet, setPendingPallet] =
+    useState('');
+
+  const [deliveryNumber, setDeliveryNumber] =
+    useState('');
+
+  const [customerName, setCustomerName] =
+    useState('');
 
   /* =========================
      FETCH TRUCK
@@ -103,6 +122,51 @@ const TruckDetailsPage = () => {
     };
 
   /* =========================
+     SUBMIT PALLET
+  ========================= */
+  const submitPallet =
+    async () => {
+      try {
+        await api.post(
+          '/pallets/scan',
+          {
+            palletCode:
+              pendingPallet,
+            truckId: truck._id,
+            deliveryNumber,
+            customerName,
+          }
+        );
+
+        toast.success(
+          `Pallet ${pendingPallet.slice(
+            -4
+          )} scanned`
+        );
+
+        fetchTruck();
+
+        fetchPallets();
+
+        fetchDeliveries();
+
+        setShowScanner(false);
+
+        setDeliveryNumber('');
+
+        setCustomerName('');
+
+        setPendingPallet('');
+      } catch (error) {
+        toast.error(
+          error.response?.data
+            ?.message ||
+            'Scan failed'
+        );
+      }
+    };
+
+  /* =========================
      HANDLE SCAN
   ========================= */
   const handleScan = async (
@@ -110,19 +174,6 @@ const TruckDetailsPage = () => {
   ) => {
     try {
       navigator.vibrate?.(100);
-
-      /* DEMO DELIVERY PARSER */
-      const deliveryNumber =
-        prompt(
-          'Enter Delivery Number'
-        );
-
-      const customerName =
-        prompt(
-          'Enter Customer Name'
-        );
-
-      if (!deliveryNumber) return;
 
       /* LOADING MODE */
       if (loadingMode) {
@@ -139,31 +190,25 @@ const TruckDetailsPage = () => {
             -4
           )} LOADED`
         );
-      } else {
-        await api.post(
-          '/pallets/scan',
-          {
-            palletCode,
-            truckId: truck._id,
-            deliveryNumber,
-            customerName,
-          }
-        );
 
-        toast.success(
-          `Pallet ${palletCode.slice(
-            -4
-          )} scanned`
-        );
+        fetchTruck();
+
+        fetchPallets();
+
+        fetchDeliveries();
+
+        setShowScanner(false);
+
+        return;
       }
 
-      fetchTruck();
+      /* SAVE PALLET */
+      setPendingPallet(
+        palletCode
+      );
 
-      fetchPallets();
-
-      fetchDeliveries();
-
-      setShowScanner(false);
+      /* OPEN DELIVERY PAD */
+      setShowDeliveryPad(true);
     } catch (error) {
       navigator.vibrate?.([
         100,
@@ -508,47 +553,6 @@ const TruckDetailsPage = () => {
                     </p>
                   </div>
 
-                  <div className="mt-5 grid grid-cols-2 gap-3">
-                    {pallets
-                      .filter(
-                        (p) =>
-                          p.deliveryNumber ===
-                          delivery.deliveryNumber
-                      )
-                      .map((pallet) => (
-                        <div
-                          key={pallet._id}
-                          className={`rounded-2xl p-4 border ${pallet.status === 'LOADED'
-                              ? 'bg-green-500/10 border-green-500'
-                              : 'bg-zinc-800 border-zinc-700'
-                            }`}
-                        >
-                          <p className="text-zinc-500 text-xs">
-                            PALLET
-                          </p>
-
-                          <h3 className="text-3xl font-black text-orange-500 mt-1">
-                            #
-                            {pallet.last4Digits}
-                          </h3>
-
-                          <p
-                            className={`mt-3 font-bold ${pallet.status ===
-                                'LOADED'
-                                ? 'text-green-400'
-                                : 'text-orange-400'
-                              }`}
-                          >
-                            {pallet.status}
-                          </p>
-
-                          <p className="text-zinc-600 text-xs mt-2 break-all">
-                            {pallet.palletCode}
-                          </p>
-                        </div>
-                      ))}
-                  </div>
-                  
                   <div
                     className={`px-4 py-2 rounded-xl font-bold ${
                       delivery.status ===
@@ -564,6 +568,54 @@ const TruckDetailsPage = () => {
                       delivery.status
                     }
                   </div>
+                </div>
+
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  {pallets
+                    .filter(
+                      (p) =>
+                        p.deliveryNumber ===
+                        delivery.deliveryNumber
+                    )
+                    .map((pallet) => (
+                      <div
+                        key={pallet._id}
+                        className={`rounded-2xl p-4 border ${
+                          pallet.status ===
+                          'LOADED'
+                            ? 'bg-green-500/10 border-green-500'
+                            : 'bg-zinc-800 border-zinc-700'
+                        }`}
+                      >
+                        <p className="text-zinc-500 text-xs">
+                          PALLET
+                        </p>
+
+                        <h3 className="text-3xl font-black text-orange-500 mt-1">
+                          #
+                          {
+                            pallet.last4Digits
+                          }
+                        </h3>
+
+                        <p
+                          className={`mt-3 font-bold ${
+                            pallet.status ===
+                            'LOADED'
+                              ? 'text-green-400'
+                              : 'text-orange-400'
+                          }`}
+                        >
+                          {pallet.status}
+                        </p>
+
+                        <p className="text-zinc-600 text-xs mt-2 break-all">
+                          {
+                            pallet.palletCode
+                          }
+                        </p>
+                      </div>
+                    ))}
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 mt-5">
@@ -666,6 +718,52 @@ const TruckDetailsPage = () => {
         </button>
       </div>
 
+      {/* DELIVERY PAD */}
+      {showDeliveryPad && (
+        <KeypadModal
+          title="DELIVERY NUMBER"
+          value={deliveryNumber}
+          onClose={() =>
+            setShowDeliveryPad(false)
+          }
+          onSubmit={(value) => {
+            setDeliveryNumber(
+              value
+            );
+
+            setShowDeliveryPad(
+              false
+            );
+
+            setShowCustomerPad(
+              true
+            );
+          }}
+        />
+      )}
+
+      {/* CUSTOMER PAD */}
+      {showCustomerPad && (
+        <KeypadModal
+          title="CUSTOMER NAME"
+          value={customerName}
+          onClose={() =>
+            setShowCustomerPad(false)
+          }
+          onSubmit={(value) => {
+            setCustomerName(
+              value
+            );
+
+            setShowCustomerPad(
+              false
+            );
+
+            submitPallet();
+          }}
+        />
+      )}
+
       {/* SCANNER */}
       {showScanner && (
         <PalletScanner
@@ -722,4 +820,5 @@ const TruckDetailsPage = () => {
     </div>
   );
 };
+
 export default TruckDetailsPage;
