@@ -211,7 +211,7 @@ const DashboardPage = () => {
             );
 
           const progress =
-            (truck.loadedCount /
+            (truck.floorReadyCount /
               truck.maxPallets) *
             100;
 
@@ -301,9 +301,7 @@ const DashboardPage = () => {
                   </p>
 
                   <p className="text-sm font-bold">
-                    {
-                      truck.loadedCount
-                    }
+                    {truck.floorReadyCount}
                     /{truck.maxPallets}
                   </p>
                 </div>
