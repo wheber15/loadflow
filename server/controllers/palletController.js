@@ -39,6 +39,7 @@ const updateTruckStatus = async (
       0
     );
 
+  /* LIVE COUNTS */
   truck.floorReadyCount =
     totalFloor;
 
@@ -51,11 +52,11 @@ const updateTruckStatus = async (
   truck.deliveryCount =
     deliveries.length;
 
+  const totalActive =
+    totalFloor + totalBulk;
+
   /* EMPTY */
-  if (
-    totalFloor === 0 &&
-    totalBulk === 0
-  ) {
+  if (totalActive === 0) {
     truck.status = 'EMPTY';
   }
 
@@ -72,6 +73,15 @@ const updateTruckStatus = async (
   ) {
     truck.status =
       'FLOOR_READY';
+  }
+
+  /* COMPLETE */
+  if (
+    totalLoaded >=
+    truck.maxPallets
+  ) {
+    truck.status =
+      'COMPLETE';
   }
 
   await truck.save();
@@ -232,6 +242,11 @@ export const scanPallet = async (
     io.emit(
       'delivery:updated',
       delivery
+    );
+
+    io.emit(
+      'truck:updated',
+      truck
     );
 
     /* RESPONSE */
