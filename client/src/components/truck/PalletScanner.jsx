@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 
 import {
-  Html5Qrcode,
+  Html5QrcodeScanner,
 } from 'html5-qrcode';
 
 const PalletScanner = ({
@@ -43,12 +43,12 @@ const PalletScanner = ({
 
             try {
               await scanner.clear();
-            } catch { }
+            } catch {}
 
             onScan(decodedText);
           },
 
-          () => { }
+          () => {}
         );
       } catch (error) {
         console.log(error);
@@ -65,7 +65,7 @@ const PalletScanner = ({
       if (scanner) {
         scanner
           .clear()
-          .catch(() => { });
+          .catch(() => {});
       }
     };
   }, []);
