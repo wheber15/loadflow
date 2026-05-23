@@ -1,7 +1,9 @@
+// src/components/truck/PalletScanner.jsx
+
 import { useEffect } from 'react';
 
 import {
-  Html5QrcodeScanner,
+  Html5Qrcode,
 } from 'html5-qrcode';
 
 const PalletScanner = ({
@@ -9,94 +11,160 @@ const PalletScanner = ({
   onClose,
 }) => {
   useEffect(() => {
-    const scanner =
-      new Html5QrcodeScanner(
-        'reader',
-        {
-          fps: 15,
-          qrbox: {
-            width: 320,
-            height: 160,
-          },
+    let scanner;
 
-          rememberLastUsedCamera: true,
+    const startScanner =
+      async () => {
+        try {
+          scanner =
+            new Html5Qrcode(
+              'reader'
+            );
 
-          aspectRatio: 1.777,
+          const cameras =
+            await Html5Qrcode.getCameras();
 
-          showTorchButtonIfSupported: true,
-        },
-        false
-      );
+          if (!cameras.length) {
+            alert(
+              'No camera found'
+            );
 
-    scanner.render(
-      (decodedText) => {
-        navigator.vibrate?.(100);
+            return;
+          }
 
-        onScan(decodedText);
+          /* BACK CAMERA */
+          const backCamera =
+            cameras.find(
+              (c) =>
+                c.label
+                  .toLowerCase()
+                  .includes('back')
+            ) || cameras[0];
 
-        scanner.clear();
-      },
-      () => {}
-    );
+          await scanner.start(
+            backCamera.id,
+            {
+              fps: 20,
+
+              qrbox: {
+                width: 350,
+                height: 180,
+              },
+
+              aspectRatio: 1.777,
+
+              disableFlip: false,
+
+              experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true,
+              },
+
+              formatsToSupport: [
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+              ],
+            },
+
+            async (
+              decodedText
+            ) => {
+              navigator.vibrate?.(
+                200
+              );
+
+              try {
+                await scanner.stop();
+
+                onScan(
+                  decodedText
+                );
+              } catch (err) {
+                console.log(
+                  err
+                );
+              }
+            },
+
+            () => {}
+          );
+        } catch (err) {
+          console.log(err);
+
+          alert(
+            'Scanner failed to start'
+          );
+        }
+      };
+
+    startScanner();
 
     return () => {
-      scanner
-        .clear()
-        .catch(() => {});
+      if (scanner) {
+        scanner
+          .stop()
+          .catch(() => {});
+      }
     };
   }, []);
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      {/* TOP BAR */}
-      <div className="flex items-center justify-between p-4 border-b border-zinc-800 bg-zinc-950">
+      {/* HEADER */}
+      <div className="bg-zinc-950 border-b border-zinc-800 p-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-black text-orange-500">
-            LOADFLOW SCANNER
-          </h2>
+          <h1 className="text-3xl font-black text-orange-500">
+            LOADFLOW
+          </h1>
 
-          <p className="text-zinc-400 text-sm">
-            Scan pallet barcode
+          <p className="text-zinc-400">
+            Scan SAP pallet label
           </p>
         </div>
 
         <button
           onClick={onClose}
-          className="bg-red-500 hover:bg-red-600 px-5 py-3 rounded-2xl font-bold"
+          className="bg-red-500 hover:bg-red-600 px-5 py-3 rounded-2xl font-black"
         >
           CLOSE
         </button>
       </div>
 
       {/* SCANNER */}
-      <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
-        <div className="w-full max-w-2xl bg-zinc-900 rounded-3xl border border-zinc-800 p-4">
-          <div id="reader" />
+      <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+        <div className="w-full max-w-3xl bg-zinc-900 rounded-3xl border border-zinc-800 overflow-hidden">
+          <div
+            id="reader"
+            className="w-full"
+          />
         </div>
       </div>
 
-      {/* BOTTOM HELP */}
+      {/* HELP */}
       <div className="p-4 border-t border-zinc-800 bg-zinc-950">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
-            <p className="text-zinc-500 text-sm">
-              SCAN MODE
-            </p>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+          <h3 className="text-orange-500 font-black text-xl">
+            SCAN TIPS
+          </h3>
 
-            <h3 className="text-xl font-bold text-orange-500 mt-2">
-              SAP LABELS
-            </h3>
-          </div>
+          <ul className="mt-3 text-zinc-400 space-y-2 text-sm">
+            <li>
+              • Hold camera 15cm away
+            </li>
 
-          <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
-            <p className="text-zinc-500 text-sm">
-              CAMERA
-            </p>
+            <li>
+              • Keep barcode fully inside frame
+            </li>
 
-            <h3 className="text-xl font-bold text-emerald-400 mt-2">
-              ACTIVE
-            </h3>
-          </div>
+            <li>
+              • Avoid shadows/reflections
+            </li>
+
+            <li>
+              • Scanner auto-detects CODE128
+            </li>
+          </ul>
         </div>
       </div>
     </div>
