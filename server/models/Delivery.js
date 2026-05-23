@@ -1,39 +1,39 @@
 import mongoose from 'mongoose';
 
-const truckSchema = new mongoose.Schema(
+const deliverySchema = new mongoose.Schema(
   {
-    truckNumber: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-
-    routeName: {
+    deliveryNumber: {
       type: String,
       required: true,
     },
 
-    maxPallets: {
-      type: Number,
-      default: 26,
+    customerName: {
+      type: String,
+      required: true,
     },
 
-    deliveryCount: {
-      type: Number,
-      default: 0,
+    truckId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Truck',
+      required: true,
     },
 
-    floorReadyCount: {
-      type: Number,
-      default: 0,
-    },
-
-    bulkWaitingCount: {
+    totalPallets: {
       type: Number,
       default: 0,
     },
 
-    loadedCount: {
+    floorPallets: {
+      type: Number,
+      default: 0,
+    },
+
+    bulkPallets: {
+      type: Number,
+      default: 0,
+    },
+
+    loadedPallets: {
       type: Number,
       default: 0,
     },
@@ -41,15 +41,13 @@ const truckSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
-        'EMPTY',
         'BUILDING',
         'WAITING_BULK',
         'FLOOR_READY',
         'LOADING',
         'COMPLETE',
-        'DISPATCHED',
       ],
-      default: 'EMPTY',
+      default: 'BUILDING',
     },
   },
   {
@@ -58,6 +56,6 @@ const truckSchema = new mongoose.Schema(
 );
 
 export default mongoose.model(
-  'Truck',
-  truckSchema
+  'Delivery',
+  deliverySchema
 );

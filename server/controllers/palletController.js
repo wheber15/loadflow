@@ -1,30 +1,124 @@
 import Pallet from '../models/Pallet.js';
 import Truck from '../models/Truck.js';
+import Delivery from '../models/Delivery.js';
 
 /* =========================
-   SCAN PALLET (BUILDING)
+   UPDATE TRUCK STATUS
+========================= */
+const updateTruckStatus = async (
+  truckId
+) => {
+  const truck =
+    await Truck.findById(truckId);
+
+  if (!truck) return;
+
+  const deliveries =
+    await Delivery.find({
+      truckId,
+    });
+
+  const totalFloor =
+    deliveries.reduce(
+      (sum, d) =>
+        sum + d.floorPallets,
+      0
+    );
+
+  const totalBulk =
+    deliveries.reduce(
+      (sum, d) =>
+        sum + d.bulkPallets,
+      0
+    );
+
+  const totalLoaded =
+    deliveries.reduce(
+      (sum, d) =>
+        sum + d.loadedPallets,
+      0
+    );
+
+  truck.floorReadyCount =
+    totalFloor;
+
+  truck.bulkWaitingCount =
+    totalBulk;
+
+  truck.loadedCount =
+    totalLoaded;
+
+  truck.deliveryCount =
+    deliveries.length;
+
+  /* EMPTY */
+  if (
+    totalFloor === 0 &&
+    totalBulk === 0
+  ) {
+    truck.status = 'EMPTY';
+  }
+
+  /* WAITING BULK */
+  else if (totalBulk > 0) {
+    truck.status =
+      'WAITING_BULK';
+  }
+
+  /* FLOOR READY */
+  else if (
+    totalFloor >=
+    truck.maxPallets
+  ) {
+    truck.status =
+      'FLOOR_READY';
+  }
+
+  await truck.save();
+};
+
+/* =========================
+   SCAN FLOOR PALLET
 ========================= */
 export const scanPallet = async (
   req,
   res
 ) => {
   try {
-    const { palletCode, truckId } =
-      req.body;
+    const {
+      palletCode,
+      truckId,
+      deliveryNumber,
+      customerName,
+    } = req.body;
 
+    /* VALIDATION */
+    if (
+      !palletCode ||
+      !truckId ||
+      !deliveryNumber ||
+      !customerName
+    ) {
+      return res.status(400).json({
+        message:
+          'Missing required fields',
+      });
+    }
+
+    /* DUPLICATE */
     const existingPallet =
       await Pallet.findOne({
         palletCode,
       });
 
-    /* DUPLICATE SCAN */
     if (existingPallet) {
       return res.status(400).json({
         message:
-          'Duplicate pallet already scanned',
+          'Pallet already exists in system',
       });
     }
 
+    /* TRUCK */
     const truck =
       await Truck.findById(
         truckId
@@ -36,14 +130,29 @@ export const scanPallet = async (
       });
     }
 
-    /* MAX PALLETS */
-    const palletCount =
+    /* BLOCK IF LOADING */
+    if (
+      truck.status ===
+        'LOADING' ||
+      truck.status ===
+        'COMPLETE' ||
+      truck.status ===
+        'DISPATCHED'
+    ) {
+      return res.status(400).json({
+        message:
+          'Truck locked for scanning',
+      });
+    }
+
+    /* TOTAL PALLETS */
+    const totalPallets =
       await Pallet.countDocuments({
         truckId,
       });
 
     if (
-      palletCount >=
+      totalPallets >=
       truck.maxPallets
     ) {
       return res.status(400).json({
@@ -56,15 +165,63 @@ export const scanPallet = async (
     const last4Digits =
       palletCode.slice(-4);
 
+    /* FIND DELIVERY */
+    let delivery =
+      await Delivery.findOne({
+        truckId,
+        deliveryNumber,
+      });
+
+    /* CREATE DELIVERY */
+    if (!delivery) {
+      delivery =
+        await Delivery.create({
+          deliveryNumber,
+          customerName,
+          truckId,
+          totalPallets: 0,
+          floorPallets: 0,
+          bulkPallets: 0,
+          loadedPallets: 0,
+          status: 'BUILDING',
+        });
+    }
+
     /* CREATE PALLET */
     const pallet =
       await Pallet.create({
         palletCode,
         last4Digits,
+        deliveryNumber,
+        customerName,
+        deliveryId:
+          delivery._id,
         truckId,
-        status: 'SCANNED',
+        palletType: 'FLOOR',
+        status: 'READY',
       });
 
+    /* UPDATE DELIVERY */
+    delivery.totalPallets += 1;
+
+    delivery.floorPallets += 1;
+
+    /* DELIVERY READY */
+    if (
+      delivery.bulkPallets === 0
+    ) {
+      delivery.status =
+        'FLOOR_READY';
+    }
+
+    await delivery.save();
+
+    /* UPDATE TRUCK */
+    await updateTruckStatus(
+      truckId
+    );
+
+    /* SOCKET */
     const io = req.app.get('io');
 
     io.emit(
@@ -72,8 +229,21 @@ export const scanPallet = async (
       pallet
     );
 
-    res.status(201).json(pallet);
+    io.emit(
+      'delivery:updated',
+      delivery
+    );
+
+    /* RESPONSE */
+    res.status(201).json({
+      pallet,
+      delivery,
+      message:
+        'Pallet scanned successfully',
+    });
   } catch (error) {
+    console.log(error);
+
     res.status(500).json({
       message: error.message,
     });
@@ -81,75 +251,316 @@ export const scanPallet = async (
 };
 
 /* =========================
-   LOAD PALLET (LOADING)
+   ADD BULK PALLETS
 ========================= */
-export const loadPallet = async (
-  req,
-  res
-) => {
-  try {
-    const { palletCode, truckId } =
-      req.body;
+export const addBulkPallets =
+  async (req, res) => {
+    try {
+      const {
+        truckId,
+        deliveryNumber,
+        quantity,
+      } = req.body;
 
-    const pallet =
-      await Pallet.findOne({
-        palletCode,
-      });
+      const delivery =
+        await Delivery.findOne({
+          truckId,
+          deliveryNumber,
+        });
 
-    /* NOT FOUND */
-    if (!pallet) {
-      return res.status(404).json({
+      if (!delivery) {
+        return res.status(404).json({
+          message:
+            'Delivery not found',
+        });
+      }
+
+      delivery.bulkPallets +=
+        Number(quantity);
+
+      delivery.totalPallets +=
+        Number(quantity);
+
+      delivery.status =
+        'WAITING_BULK';
+
+      await delivery.save();
+
+      await updateTruckStatus(
+        truckId
+      );
+
+      const io =
+        req.app.get('io');
+
+      io.emit(
+        'delivery:updated',
+        delivery
+      );
+
+      res.json({
         message:
-          'Pallet not found',
+          'Bulk pallets added',
+        delivery,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
       });
     }
+  };
 
-    /* WRONG TRUCK */
-    if (
-      pallet.truckId.toString() !==
-      truckId
-    ) {
-      return res.status(400).json({
+/* =========================
+   MARK BULK ARRIVED
+========================= */
+export const markBulkArrived =
+  async (req, res) => {
+    try {
+      const { deliveryId } =
+        req.body;
+
+      const delivery =
+        await Delivery.findById(
+          deliveryId
+        );
+
+      if (!delivery) {
+        return res.status(404).json({
+          message:
+            'Delivery not found',
+        });
+      }
+
+      delivery.floorPallets +=
+        delivery.bulkPallets;
+
+      delivery.bulkPallets = 0;
+
+      delivery.status =
+        'FLOOR_READY';
+
+      await delivery.save();
+
+      await updateTruckStatus(
+        delivery.truckId
+      );
+
+      const io =
+        req.app.get('io');
+
+      io.emit(
+        'delivery:updated',
+        delivery
+      );
+
+      res.json({
         message:
-          'Wrong truck pallet',
+          'Bulk pallets moved to floor',
+        delivery,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
       });
     }
+  };
 
-    /* ALREADY LOADED */
-    if (
-      pallet.status === 'LOADED'
-    ) {
-      return res.status(400).json({
+/* =========================
+   START LOADING
+========================= */
+export const startLoading =
+  async (req, res) => {
+    try {
+      const { truckId } =
+        req.body;
+
+      const truck =
+        await Truck.findById(
+          truckId
+        );
+
+      if (!truck) {
+        return res.status(404).json({
+          message: 'Truck not found',
+        });
+      }
+
+      /* MUST BE READY */
+      if (
+        truck.floorReadyCount <
+        truck.maxPallets
+      ) {
+        return res.status(400).json({
+          message:
+            'Truck not fully ready',
+        });
+      }
+
+      if (
+        truck.bulkWaitingCount >
+        0
+      ) {
+        return res.status(400).json({
+          message:
+            'Bulk pallets still waiting',
+        });
+      }
+
+      truck.status = 'LOADING';
+
+      await truck.save();
+
+      const io =
+        req.app.get('io');
+
+      io.emit(
+        'truck:updated',
+        truck
+      );
+
+      res.json({
         message:
-          'Pallet already loaded',
+          'Loading started',
+        truck,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
       });
     }
+  };
 
-    /* UPDATE STATUS */
-    pallet.status = 'LOADED';
+/* =========================
+   LOAD PALLET
+========================= */
+export const loadPallet =
+  async (req, res) => {
+    try {
+      const { palletCode } =
+        req.body;
 
-    pallet.loadedAt = new Date();
+      const pallet =
+        await Pallet.findOne({
+          palletCode,
+        });
 
-    await pallet.save();
+      if (!pallet) {
+        return res.status(404).json({
+          message:
+            'Pallet not found',
+        });
+      }
 
-    const io = req.app.get('io');
+      const truck =
+        await Truck.findById(
+          pallet.truckId
+        );
 
-    io.emit(
-      'pallet:loaded',
-      pallet
-    );
+      if (!truck) {
+        return res.status(404).json({
+          message:
+            'Truck not found',
+        });
+      }
 
-    res.json({
-      message:
-        'Pallet loaded successfully',
-      pallet,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
-  }
-};
+      /* MUST BE LOADING */
+      if (
+        truck.status !==
+        'LOADING'
+      ) {
+        return res.status(400).json({
+          message:
+            'Truck not in loading mode',
+        });
+      }
+
+      /* ALREADY LOADED */
+      if (
+        pallet.status ===
+        'LOADED'
+      ) {
+        return res.status(400).json({
+          message:
+            'Pallet already loaded',
+        });
+      }
+
+      pallet.status = 'LOADED';
+
+      pallet.loadedAt =
+        new Date();
+
+      await pallet.save();
+
+      /* DELIVERY */
+      const delivery =
+        await Delivery.findById(
+          pallet.deliveryId
+        );
+
+      if (delivery) {
+        delivery.loadedPallets += 1;
+
+        /* COMPLETE DELIVERY */
+        if (
+          delivery.loadedPallets >=
+          delivery.totalPallets
+        ) {
+          delivery.status =
+            'COMPLETE';
+        }
+
+        await delivery.save();
+      }
+
+      /* AUTO COMPLETE TRUCK */
+      const totalLoaded =
+        await Pallet.countDocuments(
+          {
+            truckId:
+              truck._id,
+            status: 'LOADED',
+          }
+        );
+
+      if (
+        totalLoaded >=
+        truck.maxPallets
+      ) {
+        truck.status =
+          'COMPLETE';
+
+        await truck.save();
+      }
+
+      await updateTruckStatus(
+        truck._id
+      );
+
+      const io =
+        req.app.get('io');
+
+      io.emit(
+        'pallet:loaded',
+        pallet
+      );
+
+      io.emit(
+        'truck:updated',
+        truck
+      );
+
+      res.json({
+        message:
+          'Pallet loaded successfully',
+        pallet,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  };
 
 /* =========================
    GET TRUCK PALLETS
@@ -166,6 +577,28 @@ export const getTruckPallets =
         });
 
       res.json(pallets);
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  };
+
+/* =========================
+   GET TRUCK DELIVERIES
+========================= */
+export const getTruckDeliveries =
+  async (req, res) => {
+    try {
+      const deliveries =
+        await Delivery.find({
+          truckId:
+            req.params.truckId,
+        }).sort({
+          createdAt: -1,
+        });
+
+      res.json(deliveries);
     } catch (error) {
       res.status(500).json({
         message: error.message,

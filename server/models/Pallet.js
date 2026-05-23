@@ -7,10 +7,27 @@ const palletSchema =
         type: String,
         required: true,
         unique: true,
+        index: true,
       },
 
       last4Digits: {
         type: String,
+      },
+
+      deliveryNumber: {
+        type: String,
+        required: true,
+      },
+
+      customerName: {
+        type: String,
+        required: true,
+      },
+
+      deliveryId: {
+        type:
+          mongoose.Schema.Types.ObjectId,
+        ref: 'Delivery',
       },
 
       truckId: {
@@ -19,8 +36,20 @@ const palletSchema =
         ref: 'Truck',
       },
 
+      palletType: {
+        type: String,
+        enum: ['FLOOR', 'BULK'],
+        default: 'FLOOR',
+      },
+
       status: {
         type: String,
+        enum: [
+          'SCANNED',
+          'READY',
+          'LOADING',
+          'LOADED',
+        ],
         default: 'SCANNED',
       },
 
