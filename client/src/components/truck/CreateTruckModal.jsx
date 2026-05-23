@@ -84,13 +84,13 @@ const CreateTruckModal = ({
                 e.target.value
               )
             }
-            className="w-full bg-zinc-900 border border-zinc-800 focus:border-orange-500 p-6 rounded-2xl text-4xl font-black outline-none"
+            className="w-full bg-zinc-900 border border-zinc-800 focus:border-orange-500 p-6 rounded-2xl text-xl font-black outline-none"
             required
           />
         </div>
 
         {/* ROUTE */}
-        <div className="mb-6">
+        <div className="mb-5">
           <label className="block text-zinc-400 mb-2 font-bold">
             Route Name
           </label>
@@ -104,7 +104,7 @@ const CreateTruckModal = ({
                 e.target.value.toUpperCase()
               )
             }
-            className="w-full bg-zinc-900 border border-zinc-800 focus:border-orange-500 p-6 rounded-2xl text-2xl font-bold uppercase outline-none"
+            className="w-full bg-zinc-900 border border-zinc-800 focus:border-orange-500 p-6 rounded-2xl text-xl font-bold uppercase outline-none"
             required
           />
         </div>
