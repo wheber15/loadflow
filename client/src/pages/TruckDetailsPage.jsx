@@ -180,6 +180,32 @@ const TruckDetailsPage = () => {
       navigator.vibrate?.(100);
 
       /* =========================
+         CHECK DUPLICATE FIRST
+      ========================= */
+      try {
+        await api.post(
+          '/pallets/check',
+          {
+            palletCode,
+          }
+        );
+      } catch (error) {
+        navigator.vibrate?.([
+          200,
+          100,
+          200,
+        ]);
+
+        toast.error(
+          'PALLET ALREADY EXISTS'
+        );
+
+        setShowScanner(false);
+
+        return;
+      }
+
+      /* =========================
          LOADING MODE
       ========================= */
       if (loadingMode) {
@@ -250,6 +276,8 @@ const TruckDetailsPage = () => {
         palletCode
       );
 
+      setShowScanner(false);
+
       setShowDeliveryPad(true);
     } catch (error) {
       navigator.vibrate?.([
@@ -261,7 +289,7 @@ const TruckDetailsPage = () => {
       toast.error(
         error.response?.data
           ?.message ||
-          'Scan failed'
+        'Scan failed'
       );
     }
   };

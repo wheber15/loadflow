@@ -1,18 +1,27 @@
-// routes/palletRoutes.js
+// FULL UPDATED routes/palletRoutes.js
 
 import express from 'express';
 
 import {
   scanPallet,
-  scanBulkPallet,
   getTruckPallets,
   loadPallet,
+  addBulkPallets,
   markBulkArrived,
   startLoading,
   getTruckDeliveries,
+  checkPalletExists,
 } from '../controllers/palletController.js';
 
 const router = express.Router();
+
+/* =========================
+   CHECK DUPLICATE
+========================= */
+router.post(
+  '/check',
+  checkPalletExists
+);
 
 /* =========================
    SCAN FLOOR PALLET
@@ -20,14 +29,6 @@ const router = express.Router();
 router.post(
   '/scan',
   scanPallet
-);
-
-/* =========================
-   SCAN BULK PALLET
-========================= */
-router.post(
-  '/bulk-scan',
-  scanBulkPallet
 );
 
 /* =========================
@@ -44,6 +45,14 @@ router.post(
 router.post(
   '/start-loading',
   startLoading
+);
+
+/* =========================
+   ADD BULK PALLETS
+========================= */
+router.post(
+  '/bulk',
+  addBulkPallets
 );
 
 /* =========================

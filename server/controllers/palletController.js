@@ -131,6 +131,50 @@ const updateTruckStatus =
   };
 
 /* =========================
+   CHECK DUPLICATE PALLET
+========================= */
+export const checkPalletExists =
+  async (req, res) => {
+    try {
+      let { palletCode } =
+        req.body;
+
+      palletCode =
+        validateBarcode(
+          palletCode
+        );
+
+      if (!palletCode) {
+        return res.status(400).json({
+          message:
+            'Invalid barcode',
+        });
+      }
+
+      const existing =
+        await Pallet.findOne({
+          palletCode,
+        });
+
+      if (existing) {
+        return res.status(400).json({
+          message:
+            'Pallet already exists',
+        });
+      }
+
+      res.json({
+        success: true,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message:
+          'Failed to check pallet',
+      });
+    }
+  };
+
+/* =========================
    SCAN FLOOR PALLET
 ========================= */
 export const scanPallet =
@@ -152,6 +196,18 @@ export const scanPallet =
         return res.status(400).json({
           message:
             'Invalid barcode scan. Please rescan pallet.',
+        });
+      }
+
+      /* DELIVERY NUMBER VALIDATION */
+      if (
+        !/^\d{10}$/.test(
+          deliveryNumber
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            'Delivery number must be exactly 10 digits',
         });
       }
 
