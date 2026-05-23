@@ -43,17 +43,35 @@ const DashboardPage = () => {
                     'LOADED'
                 ).length;
 
+              const readyCount =
+                pallets.filter(
+                  (p) =>
+                    p.status ===
+                    'READY'
+                ).length;
+
+              const loadingCount =
+                pallets.filter(
+                  (p) =>
+                    p.status ===
+                    'LOADING'
+                ).length;
+
               return {
                 ...truck,
                 palletCount:
                   pallets.length,
                 loadedCount,
+                readyCount,
+                loadingCount,
               };
             } catch {
               return {
                 ...truck,
                 palletCount: 0,
                 loadedCount: 0,
+                readyCount: 0,
+                loadingCount: 0,
               };
             }
           })
@@ -85,6 +103,11 @@ const DashboardPage = () => {
       fetchTrucks
     );
 
+    socket.on(
+      'delivery:updated',
+      fetchTrucks
+    );
+
     return () => {
       socket.off(
         'pallet:scanned'
@@ -96,6 +119,10 @@ const DashboardPage = () => {
 
       socket.off(
         'truck:updated'
+      );
+
+      socket.off(
+        'delivery:updated'
       );
     };
   }, []);
@@ -109,11 +136,13 @@ const DashboardPage = () => {
     ) {
       return {
         badge:
-          'bg-purple-500/20 text-purple-400',
+          'bg-purple-500/20 text-purple-400 border border-purple-500/30',
         progress:
           'bg-purple-500',
         border:
           'hover:border-purple-500',
+        glow:
+          'hover:shadow-purple-500/20',
       };
     }
 
@@ -123,11 +152,13 @@ const DashboardPage = () => {
     ) {
       return {
         badge:
-          'bg-emerald-500/20 text-emerald-400',
+          'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
         progress:
           'bg-emerald-500',
         border:
           'hover:border-emerald-500',
+        glow:
+          'hover:shadow-emerald-500/20',
       };
     }
 
@@ -137,11 +168,13 @@ const DashboardPage = () => {
     ) {
       return {
         badge:
-          'bg-green-500/20 text-green-400',
+          'bg-green-500/20 text-green-400 border border-green-500/30',
         progress:
           'bg-green-500',
         border:
           'hover:border-green-500',
+        glow:
+          'hover:shadow-green-500/20',
       };
     }
 
@@ -151,38 +184,45 @@ const DashboardPage = () => {
     ) {
       return {
         badge:
-          'bg-blue-500/20 text-blue-400',
+          'bg-blue-500/20 text-blue-400 border border-blue-500/30',
         progress:
           'bg-blue-500',
         border:
           'hover:border-blue-500',
+        glow:
+          'hover:shadow-blue-500/20',
       };
     }
 
     if (
-      truck.palletCount === 0
+      truck.status ===
+      'WAITING_BULK'
     ) {
       return {
         badge:
-          'bg-red-500/20 text-red-400',
+          'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
         progress:
-          'bg-red-500',
+          'bg-yellow-500',
         border:
-          'hover:border-red-500',
+          'hover:border-yellow-500',
+        glow:
+          'hover:shadow-yellow-500/20',
       };
     }
 
     return {
       badge:
-        'bg-orange-500/20 text-orange-400',
+        'bg-orange-500/20 text-orange-400 border border-orange-500/30',
       progress:
         'bg-orange-500',
       border:
         'hover:border-orange-500',
+      glow:
+        'hover:shadow-orange-500/20',
     };
   };
 
-  /* DASHBOARD TOTALS */
+  /* TOTALS */
   const totalPallets =
     trucks.reduce(
       (sum, t) =>
@@ -205,6 +245,14 @@ const DashboardPage = () => {
       0
     );
 
+  const totalReady =
+    trucks.reduce(
+      (sum, t) =>
+        sum +
+        t.floorReadyCount,
+      0
+    );
+
   const activeLoads =
     trucks.filter(
       (t) =>
@@ -214,77 +262,102 @@ const DashboardPage = () => {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="max-w-[1900px] mx-auto p-4 md:p-6">
+      <div className="max-w-[2200px] mx-auto px-4 md:px-6 py-5">
 
         {/* HEADER */}
-        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5 mb-8">
+        <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-5 mb-8">
 
           <div>
-            <h1 className="text-5xl xl:text-6xl font-black text-orange-500">
+            <h1 className="text-5xl md:text-6xl 2xl:text-7xl font-black text-orange-500 tracking-tight">
               LoadFlow
             </h1>
 
-            <p className="text-zinc-400 mt-2 text-lg">
+            <p className="text-zinc-400 mt-2 text-base md:text-lg">
               Warehouse Logistics Dashboard
             </p>
           </div>
 
-          <button
-            onClick={() =>
-              setShowModal(true)
-            }
-            className="bg-orange-500 hover:bg-orange-600 transition px-8 py-5 rounded-3xl font-black text-xl shadow-lg"
-          >
-            + NEW LOAD
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+
+            <button
+              onClick={() =>
+                fetchTrucks()
+              }
+              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 transition px-6 py-4 rounded-3xl font-black text-lg"
+            >
+              REFRESH
+            </button>
+
+            <button
+              onClick={() =>
+                setShowModal(true)
+              }
+              className="bg-orange-500 hover:bg-orange-600 transition px-8 py-4 rounded-3xl font-black text-lg shadow-lg"
+            >
+              + NEW LOAD
+            </button>
+
+          </div>
         </div>
 
-        {/* SUMMARY */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        {/* LIVE OVERVIEW */}
+        <div className="grid grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
 
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5">
-            <p className="text-zinc-500 text-sm">
+            <p className="text-zinc-500 text-xs md:text-sm">
               ACTIVE LOADS
             </p>
 
-            <h2 className="text-5xl font-black text-orange-500 mt-3">
+            <h2 className="text-4xl md:text-5xl font-black text-orange-500 mt-3">
               {activeLoads}
             </h2>
           </div>
 
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5">
-            <p className="text-zinc-500 text-sm">
-              TOTAL PALLETS
+            <p className="text-zinc-500 text-xs md:text-sm">
+              READY
             </p>
 
-            <h2 className="text-5xl font-black text-blue-400 mt-3">
-              {totalPallets}
+            <h2 className="text-4xl md:text-5xl font-black text-blue-400 mt-3">
+              {totalReady}
             </h2>
           </div>
 
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5">
-            <p className="text-zinc-500 text-sm">
+            <p className="text-zinc-500 text-xs md:text-sm">
               BULK WAITING
             </p>
 
-            <h2 className="text-5xl font-black text-yellow-400 mt-3">
+            <h2 className="text-4xl md:text-5xl font-black text-yellow-400 mt-3">
               {totalBulk}
             </h2>
           </div>
 
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5">
-            <p className="text-zinc-500 text-sm">
+            <p className="text-zinc-500 text-xs md:text-sm">
               LOADED
             </p>
 
-            <h2 className="text-5xl font-black text-green-400 mt-3">
+            <h2 className="text-4xl md:text-5xl font-black text-green-400 mt-3">
               {totalLoaded}
             </h2>
           </div>
+
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5 col-span-2 xl:col-span-1">
+            <p className="text-zinc-500 text-xs md:text-sm">
+              TOTAL PALLETS
+            </p>
+
+            <h2 className="text-4xl md:text-5xl font-black text-white mt-3">
+              {totalPallets}
+            </h2>
+          </div>
+
         </div>
 
-        {/* TRUCK GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-5">
+        {/* TRUCKS */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
+
           {trucks.map((truck) => {
             const styles =
               getStatusStyles(
@@ -293,10 +366,16 @@ const DashboardPage = () => {
 
             const totalProgress =
               truck.floorReadyCount +
-              truck.bulkWaitingCount;
+              truck.bulkWaitingCount +
+              truck.loadedCount;
 
             const progress =
               (totalProgress /
+                truck.maxPallets) *
+              100;
+
+            const loadedPercent =
+              (truck.loadedCount /
                 truck.maxPallets) *
               100;
 
@@ -308,26 +387,27 @@ const DashboardPage = () => {
                     `/truck/${truck._id}`
                   )
                 }
-                className={`bg-zinc-900 rounded-3xl p-5 border border-zinc-800 cursor-pointer transition-all duration-300 hover:scale-[1.01] ${styles.border}`}
+                className={`group bg-zinc-900 rounded-[32px] p-5 border border-zinc-800 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${styles.border} ${styles.glow}`}
               >
+
                 {/* TOP */}
                 <div className="flex items-start justify-between gap-4">
 
-                  <div>
-                    <h2 className="text-3xl xl:text-4xl font-black">
+                  <div className="min-w-0">
+                    <h2 className="text-3xl xl:text-4xl font-black truncate">
                       TRUCK{' '}
                       {
                         truck.truckNumber
                       }
                     </h2>
 
-                    <p className="text-zinc-400 mt-2 text-lg">
+                    <p className="text-zinc-300 mt-2 text-lg">
                       {
                         truck.routeName
                       }
                     </p>
 
-                    <p className="text-xs text-zinc-600 mt-2">
+                    <p className="text-xs text-zinc-600 mt-2 break-all">
                       {
                         truck.loadId
                       }
@@ -335,7 +415,7 @@ const DashboardPage = () => {
                   </div>
 
                   <span
-                    className={`px-4 py-2 rounded-2xl text-sm font-black whitespace-nowrap ${styles.badge}`}
+                    className={`px-4 py-2 rounded-2xl text-xs md:text-sm font-black whitespace-nowrap ${styles.badge}`}
                   >
                     {truck.status}
                   </span>
@@ -344,7 +424,7 @@ const DashboardPage = () => {
                 {/* COUNTS */}
                 <div className="grid grid-cols-3 gap-3 mt-6">
 
-                  <div className="bg-zinc-800 rounded-2xl p-4">
+                  <div className="bg-zinc-800/80 rounded-2xl p-4 border border-zinc-700">
                     <p className="text-zinc-500 text-xs">
                       READY
                     </p>
@@ -356,7 +436,7 @@ const DashboardPage = () => {
                     </h3>
                   </div>
 
-                  <div className="bg-zinc-800 rounded-2xl p-4">
+                  <div className="bg-zinc-800/80 rounded-2xl p-4 border border-zinc-700">
                     <p className="text-zinc-500 text-xs">
                       BULK
                     </p>
@@ -368,7 +448,7 @@ const DashboardPage = () => {
                     </h3>
                   </div>
 
-                  <div className="bg-zinc-800 rounded-2xl p-4">
+                  <div className="bg-zinc-800/80 rounded-2xl p-4 border border-zinc-700">
                     <p className="text-zinc-500 text-xs">
                       LOADED
                     </p>
@@ -379,10 +459,11 @@ const DashboardPage = () => {
                       }
                     </h3>
                   </div>
+
                 </div>
 
                 {/* PROGRESS */}
-                <div className="mt-6">
+                <div className="mt-7">
 
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-zinc-500 text-sm">
@@ -403,44 +484,55 @@ const DashboardPage = () => {
                       }}
                     />
                   </div>
+
                 </div>
 
-                {/* FOOTER */}
-                <div className="mt-6 flex items-center justify-between">
+                {/* LIVE BREAKDOWN */}
+                <div className="mt-7 grid grid-cols-2 gap-4">
 
-                  <div>
+                  <div className="bg-black/30 rounded-2xl p-4 border border-zinc-800">
                     <p className="text-zinc-500 text-xs">
-                      PALLETS
+                      TOTAL PALLETS
                     </p>
 
-                    <h3 className="text-2xl font-black mt-1">
+                    <h3 className="text-3xl font-black mt-2">
                       {
                         truck.palletCount
                       }
                     </h3>
                   </div>
 
-                  <div className="text-right">
+                  <div className="bg-black/30 rounded-2xl p-4 border border-zinc-800">
                     <p className="text-zinc-500 text-xs">
                       LOADED %
                     </p>
 
-                    <h3 className="text-2xl font-black mt-1">
+                    <h3 className="text-3xl font-black text-green-400 mt-2">
                       {Math.round(
-                        progress
+                        loadedPercent
                       )}
                       %
                     </h3>
                   </div>
+
                 </div>
+
+                {/* BOTTOM ACTION */}
+                <div className="mt-6">
+                  <div className="bg-zinc-800 group-hover:bg-orange-500 transition-all rounded-2xl py-4 text-center font-black text-lg">
+                    OPEN TRUCK
+                  </div>
+                </div>
+
               </div>
             );
           })}
+
         </div>
 
         {/* EMPTY */}
         {trucks.length === 0 && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-20 text-center mt-6">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-20 text-center mt-8">
             <h2 className="text-4xl font-black text-zinc-500">
               NO ACTIVE LOADS
             </h2>
@@ -460,6 +552,7 @@ const DashboardPage = () => {
             refresh={fetchTrucks}
           />
         )}
+
       </div>
     </div>
   );
