@@ -77,7 +77,7 @@ const CreateTruckModal = ({
           <input
             type="number"
             inputMode="numeric"
-            placeholder="12"
+            placeholder="Enter truck number"
             value={truckNumber}
             onChange={(e) =>
               setTruckNumber(
@@ -97,7 +97,7 @@ const CreateTruckModal = ({
 
           <input
             type="text"
-            placeholder="DUBLIN"
+            placeholder="Enter route name"
             value={routeName}
             onChange={(e) =>
               setRouteName(
