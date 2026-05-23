@@ -435,7 +435,7 @@ const TruckDetailsPage = () => {
     <div className="min-h-screen bg-black text-white">
       <Toaster position="top-center" />
 
-      <div className="max-w-[1800px] mx-auto xl:grid xl:grid-cols-[340px_1fr_320px] xl:gap-6">
+      <div className="max-w-[2200px] mx-auto 2xl:px-6 xl:grid xl:grid-cols-[300px_1.6fr_360px] 2xl:grid-cols-[320px_1.9fr_380px] xl:gap-6">
 
         {/* LEFT SIDEBAR */}
         <div className="xl:sticky xl:top-0 xl:h-screen xl:border-r border-zinc-800 bg-black p-4">
@@ -444,22 +444,24 @@ const TruckDetailsPage = () => {
             onClick={() =>
               navigate('/')
             }
-            className="mb-4 bg-zinc-900 hover:bg-zinc-800 px-4 py-3 rounded-2xl w-full"
+            className="mb-4 bg-zinc-900 hover:bg-zinc-800 transition px-4 py-3 rounded-2xl w-full text-lg"
           >
             ← Back
           </button>
 
+          {/* TRUCK INFO */}
           <div className="bg-zinc-900 rounded-3xl border border-zinc-800 p-6">
-            <h1 className="text-6xl font-black text-orange-500">
+
+            <h1 className="text-6xl xl:text-7xl font-black text-orange-500 leading-none">
               {truck.truckNumber}
             </h1>
 
-            <p className="text-zinc-400 text-2xl mt-2">
+            <p className="text-zinc-400 text-2xl mt-3">
               {truck.routeName}
             </p>
 
             <div
-              className={`mt-5 px-5 py-4 rounded-2xl text-center font-black text-xl ${
+              className={`mt-6 px-5 py-4 rounded-2xl text-center font-black text-xl ${
                 truck.status ===
                 'COMPLETE'
                   ? 'bg-green-500'
@@ -478,42 +480,43 @@ const TruckDetailsPage = () => {
 
           {/* STATS */}
           <div className="grid grid-cols-2 gap-3 mt-4">
-            <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+
+            <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800">
               <p className="text-zinc-500 text-xs">
                 FLOOR
               </p>
 
-              <h2 className="text-3xl font-black text-orange-500 mt-2">
+              <h2 className="text-4xl font-black text-orange-500 mt-2">
                 {truck.floorReadyCount}
               </h2>
             </div>
 
-            <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+            <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800">
               <p className="text-zinc-500 text-xs">
                 BULK
               </p>
 
-              <h2 className="text-3xl font-black text-yellow-400 mt-2">
+              <h2 className="text-4xl font-black text-yellow-400 mt-2">
                 {truck.bulkWaitingCount}
               </h2>
             </div>
 
-            <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+            <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800">
               <p className="text-zinc-500 text-xs">
                 LOADED
               </p>
 
-              <h2 className="text-3xl font-black text-green-400 mt-2">
+              <h2 className="text-4xl font-black text-green-400 mt-2">
                 {loadedCount}
               </h2>
             </div>
 
-            <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+            <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800">
               <p className="text-zinc-500 text-xs">
                 DELIVERIES
               </p>
 
-              <h2 className="text-3xl font-black text-blue-400 mt-2">
+              <h2 className="text-4xl font-black text-blue-400 mt-2">
                 {deliveries.length}
               </h2>
             </div>
@@ -521,18 +524,19 @@ const TruckDetailsPage = () => {
 
           {/* PROGRESS */}
           <div className="space-y-4 mt-4">
-            <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
-              <div className="flex justify-between mb-2">
-                <span className="font-black">
+
+            <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800">
+              <div className="flex justify-between mb-3">
+                <span className="font-black text-lg">
                   FLOOR READY
                 </span>
 
-                <span className="text-orange-500 font-black">
+                <span className="text-orange-500 font-black text-lg">
                   {truck.floorReadyCount}/{truck.maxPallets}
                 </span>
               </div>
 
-              <div className="w-full bg-zinc-800 rounded-full h-4 overflow-hidden">
+              <div className="w-full bg-zinc-800 rounded-full h-5 overflow-hidden">
                 <div
                   className="bg-orange-500 h-full"
                   style={{
@@ -542,18 +546,18 @@ const TruckDetailsPage = () => {
               </div>
             </div>
 
-            <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
-              <div className="flex justify-between mb-2">
-                <span className="font-black">
+            <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800">
+              <div className="flex justify-between mb-3">
+                <span className="font-black text-lg">
                   LOADED
                 </span>
 
-                <span className="text-green-400 font-black">
+                <span className="text-green-400 font-black text-lg">
                   {loadedCount}/{truck.maxPallets}
                 </span>
               </div>
 
-              <div className="w-full bg-zinc-800 rounded-full h-4 overflow-hidden">
+              <div className="w-full bg-zinc-800 rounded-full h-5 overflow-hidden">
                 <div
                   className="bg-green-500 h-full"
                   style={{
@@ -563,85 +567,114 @@ const TruckDetailsPage = () => {
               </div>
             </div>
           </div>
+
         </div>
 
-        {/* CENTER */}
-        <div className="p-4 pb-40 xl:pb-10">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-4xl font-black">
-              Deliveries
-            </h2>
+        {/* CENTER CONTENT */}
+        <div className="p-4 pb-44 xl:pb-10">
 
-            <div className="hidden xl:flex items-center gap-3">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-3">
-                <span className="text-zinc-500 text-sm">
+          <div className="flex items-center justify-between mb-6">
+
+            <div>
+              <h2 className="text-4xl xl:text-5xl font-black">
+                Deliveries
+              </h2>
+
+              <p className="text-zinc-500 mt-1">
+                Live warehouse loading monitor
+              </p>
+            </div>
+
+            <div className="hidden xl:flex items-center gap-4">
+
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4">
+                <p className="text-zinc-500 text-xs">
                   TOTAL PALLETS
-                </span>
+                </p>
 
-                <h3 className="text-2xl font-black mt-1">
+                <h3 className="text-3xl font-black mt-1">
                   {pallets.length}
                 </h3>
               </div>
+
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4">
+                <p className="text-zinc-500 text-xs">
+                  CAPACITY
+                </p>
+
+                <h3 className="text-3xl font-black mt-1">
+                  {truck.maxPallets}
+                </h3>
+              </div>
+
             </div>
           </div>
 
-          <div className="space-y-4">
+          {/* DELIVERIES */}
+          <div className="space-y-5">
+
             {deliveries.map(
               (delivery) => (
                 <div
                   key={delivery._id}
-                  className="bg-zinc-900 rounded-3xl p-5 border border-zinc-800"
+                  className="bg-zinc-900 rounded-3xl border border-zinc-800 overflow-hidden"
                 >
-                  <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
 
-                    <div>
+                  <div className="xl:grid xl:grid-cols-[380px_1fr]">
+
+                    {/* DELIVERY INFO */}
+                    <div className="p-5 xl:border-r border-zinc-800">
+
                       <p className="text-zinc-500 text-xs">
                         DELIVERY
                       </p>
 
-                      <h2 className="text-2xl xl:text-3xl font-black text-orange-500">
+                      <h2 className="text-3xl xl:text-4xl font-black text-orange-500 mt-1 break-all">
                         {delivery.deliveryNumber}
                       </h2>
 
-                      <p className="text-zinc-300 mt-1">
+                      <p className="text-zinc-300 text-lg mt-3">
                         {delivery.customerName}
                       </p>
-                    </div>
 
-                    <div className="flex items-center gap-3 flex-wrap">
+                      {/* DELIVERY STATS */}
+                      <div className="grid grid-cols-3 gap-3 mt-5">
 
-                      <div className="bg-zinc-800 rounded-2xl px-4 py-3">
-                        <p className="text-zinc-500 text-xs">
-                          FLOOR
-                        </p>
+                        <div className="bg-zinc-800 rounded-2xl p-4">
+                          <p className="text-zinc-500 text-xs">
+                            FLOOR
+                          </p>
 
-                        <h3 className="text-xl font-black text-orange-500 mt-1">
-                          {delivery.floorPallets}
-                        </h3>
+                          <h3 className="text-2xl font-black text-orange-500 mt-1">
+                            {delivery.floorPallets}
+                          </h3>
+                        </div>
+
+                        <div className="bg-zinc-800 rounded-2xl p-4">
+                          <p className="text-zinc-500 text-xs">
+                            BULK
+                          </p>
+
+                          <h3 className="text-2xl font-black text-yellow-400 mt-1">
+                            {delivery.bulkPallets}
+                          </h3>
+                        </div>
+
+                        <div className="bg-zinc-800 rounded-2xl p-4">
+                          <p className="text-zinc-500 text-xs">
+                            LOADED
+                          </p>
+
+                          <h3 className="text-2xl font-black text-green-400 mt-1">
+                            {delivery.loadedPallets}
+                          </h3>
+                        </div>
+
                       </div>
 
-                      <div className="bg-zinc-800 rounded-2xl px-4 py-3">
-                        <p className="text-zinc-500 text-xs">
-                          BULK
-                        </p>
-
-                        <h3 className="text-xl font-black text-yellow-400 mt-1">
-                          {delivery.bulkPallets}
-                        </h3>
-                      </div>
-
-                      <div className="bg-zinc-800 rounded-2xl px-4 py-3">
-                        <p className="text-zinc-500 text-xs">
-                          LOADED
-                        </p>
-
-                        <h3 className="text-xl font-black text-green-400 mt-1">
-                          {delivery.loadedPallets}
-                        </h3>
-                      </div>
-
+                      {/* STATUS */}
                       <div
-                        className={`px-5 py-4 rounded-2xl font-black ${
+                        className={`mt-5 px-5 py-4 rounded-2xl text-center font-black text-lg ${
                           delivery.status ===
                           'COMPLETE'
                             ? 'bg-green-500'
@@ -653,97 +686,126 @@ const TruckDetailsPage = () => {
                       >
                         {delivery.status}
                       </div>
-                    </div>
-                  </div>
 
-                  {/* PALLETS */}
-                  <div className="mt-5 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
-                    {pallets
-                      .filter(
-                        (p) =>
-                          p.deliveryNumber ===
-                          delivery.deliveryNumber
-                      )
-                      .map((pallet) => (
-                        <div
-                          key={pallet._id}
-                          className={`rounded-2xl p-4 border ${
-                            pallet.status ===
-                            'LOADED'
-                              ? 'bg-green-500/10 border-green-500'
-                              : pallet.palletType ===
-                                'BULK'
-                              ? 'bg-yellow-500/10 border-yellow-500'
-                              : 'bg-zinc-800 border-zinc-700'
-                          }`}
-                        >
-                          <p className="text-zinc-500 text-xs">
-                            {pallet.palletType}
-                          </p>
+                      {/* BULK ACTIONS */}
+                      {!loadingMode && (
+                        <div className="grid grid-cols-1 gap-3 mt-5">
 
-                          <h3 className="text-2xl xl:text-3xl font-black text-orange-500 mt-1">
-                            #{pallet.last4Digits}
-                          </h3>
+                          <button
+                            onClick={() => {
+                              setSelectedDelivery(
+                                delivery
+                              );
 
-                          <p
-                            className={`mt-2 font-bold text-sm ${
-                              pallet.status ===
-                              'LOADED'
-                                ? 'text-green-400'
-                                : pallet.palletType ===
-                                  'BULK'
-                                ? 'text-yellow-400'
-                                : 'text-orange-400'
-                            }`}
+                              setBulkMode(true);
+
+                              setShowScanner(
+                                true
+                              );
+                            }}
+                            className="bg-yellow-500 hover:bg-yellow-600 transition text-black py-4 rounded-2xl font-black text-lg"
                           >
-                            {pallet.status}
-                          </p>
+                            SCAN BULK
+                          </button>
+
+                          {delivery.bulkPallets >
+                            0 && (
+                            <button
+                              onClick={() =>
+                                markBulkReady(
+                                  delivery._id
+                                )
+                              }
+                              className="bg-orange-500 hover:bg-orange-600 transition py-4 rounded-2xl font-black text-lg"
+                            >
+                              BULK ARRIVED
+                            </button>
+                          )}
+
                         </div>
-                      ))}
+                      )}
+
+                    </div>
+
+                    {/* PALLETS */}
+                    <div className="p-5">
+
+                      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+
+                        {pallets
+                          .filter(
+                            (p) =>
+                              p.deliveryNumber ===
+                              delivery.deliveryNumber
+                          )
+                          .map((pallet) => (
+                            <div
+                              key={pallet._id}
+                              className={`rounded-2xl p-4 border min-h-[150px] flex flex-col justify-between ${
+                                pallet.status ===
+                                'LOADED'
+                                  ? 'bg-green-500/10 border-green-500'
+                                  : pallet.palletType ===
+                                    'BULK'
+                                  ? 'bg-yellow-500/10 border-yellow-500'
+                                  : 'bg-zinc-800 border-zinc-700'
+                              }`}
+                            >
+
+                              <div>
+
+                                <p className="text-zinc-500 text-xs">
+                                  {pallet.palletType}
+                                </p>
+
+                                <h3 className="text-2xl xl:text-3xl font-black text-orange-500 mt-2">
+                                  #{pallet.last4Digits}
+                                </h3>
+
+                              </div>
+
+                              <div>
+
+                                <p
+                                  className={`font-black text-sm ${
+                                    pallet.status ===
+                                    'LOADED'
+                                      ? 'text-green-400'
+                                      : pallet.palletType ===
+                                        'BULK'
+                                      ? 'text-yellow-400'
+                                      : 'text-orange-400'
+                                  }`}
+                                >
+                                  {pallet.status}
+                                </p>
+
+                                <p className="text-zinc-600 text-xs mt-2 break-all">
+                                  {pallet.palletCode}
+                                </p>
+
+                              </div>
+
+                            </div>
+                          ))}
+
+                      </div>
+
+                    </div>
+
                   </div>
 
-                  {!loadingMode && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
-                      <button
-                        onClick={() => {
-                          setSelectedDelivery(
-                            delivery
-                          );
-
-                          setBulkMode(true);
-
-                          setShowScanner(
-                            true
-                          );
-                        }}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-black py-4 rounded-2xl font-black text-lg"
-                      >
-                        SCAN BULK
-                      </button>
-
-                      {delivery.bulkPallets >
-                        0 && (
-                        <button
-                          onClick={() =>
-                            markBulkReady(
-                              delivery._id
-                            )
-                          }
-                          className="bg-orange-500 hover:bg-orange-600 py-4 rounded-2xl font-black text-lg"
-                        >
-                          BULK ARRIVED
-                        </button>
-                      )}
-                    </div>
-                  )}
                 </div>
               )
             )}
+
           </div>
+
         </div>
 
         {/* RIGHT ACTION PANEL */}
         <div className="hidden xl:block xl:sticky xl:top-0 xl:h-screen border-l border-zinc-800 bg-black p-4">
+
           <div className="space-y-4">
 
             {!loadingMode && (
@@ -755,7 +817,7 @@ const TruckDetailsPage = () => {
                     truck.maxPallets
                 }
                 onClick={startLoading}
-                className={`w-full py-5 rounded-3xl text-2xl font-black ${
+                className={`w-full py-5 rounded-3xl text-2xl font-black transition ${
                   truck.bulkWaitingCount >
                     0 ||
                   truck.floorReadyCount <
@@ -772,7 +834,7 @@ const TruckDetailsPage = () => {
               onClick={() =>
                 setShowScanner(true)
               }
-              className={`w-full py-6 rounded-3xl text-3xl font-black ${
+              className={`w-full py-6 rounded-3xl text-3xl font-black transition ${
                 loadingMode
                   ? 'bg-green-600'
                   : bulkMode
@@ -787,18 +849,21 @@ const TruckDetailsPage = () => {
                 : 'SCAN PALLET'}
             </button>
 
+            {/* LIVE STATUS */}
             <div className="bg-zinc-900 rounded-3xl border border-zinc-800 p-5">
-              <h3 className="text-2xl font-black mb-4">
+
+              <h3 className="text-2xl font-black mb-5">
                 LIVE STATUS
               </h3>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
+
                 <div className="flex justify-between">
                   <span className="text-zinc-500">
                     Total Pallets
                   </span>
 
-                  <span className="font-black">
+                  <span className="font-black text-xl">
                     {pallets.length}
                   </span>
                 </div>
@@ -808,7 +873,7 @@ const TruckDetailsPage = () => {
                     Deliveries
                   </span>
 
-                  <span className="font-black">
+                  <span className="font-black text-xl">
                     {deliveries.length}
                   </span>
                 </div>
@@ -818,14 +883,47 @@ const TruckDetailsPage = () => {
                     Loaded
                   </span>
 
-                  <span className="font-black text-green-400">
+                  <span className="font-black text-green-400 text-xl">
                     {loadedCount}
                   </span>
                 </div>
+
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">
+                    Truck Status
+                  </span>
+
+                  <span className="font-black text-orange-500">
+                    {truck.status}
+                  </span>
+                </div>
+
               </div>
+
+            </div>
+
+            {/* ACTIVITY PLACEHOLDER */}
+            <div className="bg-zinc-900 rounded-3xl border border-zinc-800 p-5">
+
+              <h3 className="text-2xl font-black mb-4">
+                ACTIVITY
+              </h3>
+
+              <div className="space-y-3">
+
+                <div className="bg-zinc-800 rounded-2xl p-4">
+                  <p className="text-sm text-zinc-400">
+                    Live warehouse events
+                    will appear here
+                  </p>
+                </div>
+
+              </div>
+
             </div>
 
           </div>
+
         </div>
 
       </div>
