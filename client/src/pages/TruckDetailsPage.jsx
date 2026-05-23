@@ -179,9 +179,6 @@ const TruckDetailsPage = () => {
     try {
       navigator.vibrate?.(100);
 
-      /* =========================
-         CHECK DUPLICATE FIRST
-      ========================= */
       try {
         await api.post(
           '/pallets/check',
@@ -205,9 +202,6 @@ const TruckDetailsPage = () => {
         return;
       }
 
-      /* =========================
-         LOADING MODE
-      ========================= */
       if (loadingMode) {
         await api.post(
           '/pallets/load',
@@ -234,12 +228,9 @@ const TruckDetailsPage = () => {
         return;
       }
 
-      /* =========================
-         BULK MODE
-      ========================= */
       if (bulkMode) {
         await api.post(
-          '/pallets/bulk-scan',
+          '/pallets/bulk',
           {
             palletCode,
             truckId: truck._id,
@@ -269,9 +260,6 @@ const TruckDetailsPage = () => {
         return;
       }
 
-      /* =========================
-         FLOOR MODE
-      ========================= */
       setPendingPallet(
         palletCode
       );
@@ -289,7 +277,7 @@ const TruckDetailsPage = () => {
       toast.error(
         error.response?.data
           ?.message ||
-        'Scan failed'
+          'Scan failed'
       );
     }
   };
@@ -444,338 +432,407 @@ const TruckDetailsPage = () => {
     100;
 
   return (
-    <div className="min-h-screen bg-black text-white pb-40">
+    <div className="min-h-screen bg-black text-white">
       <Toaster position="top-center" />
 
-      {/* TOP */}
-      <div className="sticky top-0 z-40 bg-black border-b border-zinc-800 p-4">
-        <button
-          onClick={() =>
-            navigate('/')
-          }
-          className="mb-4 bg-zinc-900 px-4 py-3 rounded-2xl"
-        >
-          ← Back
-        </button>
+      <div className="max-w-[1800px] mx-auto xl:grid xl:grid-cols-[340px_1fr_320px] xl:gap-6">
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-5xl font-black text-orange-500">
-              {
-                truck.truckNumber
-              }
+        {/* LEFT SIDEBAR */}
+        <div className="xl:sticky xl:top-0 xl:h-screen xl:border-r border-zinc-800 bg-black p-4">
+
+          <button
+            onClick={() =>
+              navigate('/')
+            }
+            className="mb-4 bg-zinc-900 hover:bg-zinc-800 px-4 py-3 rounded-2xl w-full"
+          >
+            ← Back
+          </button>
+
+          <div className="bg-zinc-900 rounded-3xl border border-zinc-800 p-6">
+            <h1 className="text-6xl font-black text-orange-500">
+              {truck.truckNumber}
             </h1>
 
-            <p className="text-zinc-400 text-xl mt-2">
+            <p className="text-zinc-400 text-2xl mt-2">
               {truck.routeName}
             </p>
+
+            <div
+              className={`mt-5 px-5 py-4 rounded-2xl text-center font-black text-xl ${
+                truck.status ===
+                'COMPLETE'
+                  ? 'bg-green-500'
+                  : truck.status ===
+                    'LOADING'
+                  ? 'bg-blue-500'
+                  : truck.status ===
+                    'WAITING_BULK'
+                  ? 'bg-yellow-500 text-black'
+                  : 'bg-orange-500'
+              }`}
+            >
+              {truck.status}
+            </div>
           </div>
 
-          <div
-            className={`px-5 py-3 rounded-2xl font-black ${
-              truck.status ===
-              'COMPLETE'
-                ? 'bg-green-500'
-                : truck.status ===
-                  'LOADING'
-                ? 'bg-blue-500'
-                : truck.status ===
-                  'WAITING_BULK'
-                ? 'bg-yellow-500 text-black'
-                : 'bg-orange-500'
-            }`}
-          >
-            {truck.status}
+          {/* STATS */}
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+              <p className="text-zinc-500 text-xs">
+                FLOOR
+              </p>
+
+              <h2 className="text-3xl font-black text-orange-500 mt-2">
+                {truck.floorReadyCount}
+              </h2>
+            </div>
+
+            <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+              <p className="text-zinc-500 text-xs">
+                BULK
+              </p>
+
+              <h2 className="text-3xl font-black text-yellow-400 mt-2">
+                {truck.bulkWaitingCount}
+              </h2>
+            </div>
+
+            <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+              <p className="text-zinc-500 text-xs">
+                LOADED
+              </p>
+
+              <h2 className="text-3xl font-black text-green-400 mt-2">
+                {loadedCount}
+              </h2>
+            </div>
+
+            <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+              <p className="text-zinc-500 text-xs">
+                DELIVERIES
+              </p>
+
+              <h2 className="text-3xl font-black text-blue-400 mt-2">
+                {deliveries.length}
+              </h2>
+            </div>
+          </div>
+
+          {/* PROGRESS */}
+          <div className="space-y-4 mt-4">
+            <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+              <div className="flex justify-between mb-2">
+                <span className="font-black">
+                  FLOOR READY
+                </span>
+
+                <span className="text-orange-500 font-black">
+                  {truck.floorReadyCount}/{truck.maxPallets}
+                </span>
+              </div>
+
+              <div className="w-full bg-zinc-800 rounded-full h-4 overflow-hidden">
+                <div
+                  className="bg-orange-500 h-full"
+                  style={{
+                    width: `${progress}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+              <div className="flex justify-between mb-2">
+                <span className="font-black">
+                  LOADED
+                </span>
+
+                <span className="text-green-400 font-black">
+                  {loadedCount}/{truck.maxPallets}
+                </span>
+              </div>
+
+              <div className="w-full bg-zinc-800 rounded-full h-4 overflow-hidden">
+                <div
+                  className="bg-green-500 h-full"
+                  style={{
+                    width: `${loadingProgress}%`,
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* STATS */}
-      <div className="grid grid-cols-2 gap-4 p-4">
-        <div className="bg-zinc-900 rounded-3xl p-5 border border-zinc-800">
-          <p className="text-zinc-500 text-sm">
-            FLOOR READY
-          </p>
-
-          <h2 className="text-4xl font-black text-orange-500 mt-2">
-            {
-              truck.floorReadyCount
-            }
-          </h2>
-        </div>
-
-        <div className="bg-zinc-900 rounded-3xl p-5 border border-zinc-800">
-          <p className="text-zinc-500 text-sm">
-            BULK WAITING
-          </p>
-
-          <h2 className="text-4xl font-black text-yellow-400 mt-2">
-            {
-              truck.bulkWaitingCount
-            }
-          </h2>
-        </div>
-
-        <div className="bg-zinc-900 rounded-3xl p-5 border border-zinc-800">
-          <p className="text-zinc-500 text-sm">
-            LOADED
-          </p>
-
-          <h2 className="text-4xl font-black text-green-400 mt-2">
-            {loadedCount}
-          </h2>
-        </div>
-
-        <div className="bg-zinc-900 rounded-3xl p-5 border border-zinc-800">
-          <p className="text-zinc-500 text-sm">
-            DELIVERIES
-          </p>
-
-          <h2 className="text-4xl font-black text-blue-400 mt-2">
-            {
-              deliveries.length
-            }
-          </h2>
-        </div>
-      </div>
-
-      {/* PROGRESS */}
-      <div className="px-4">
-        <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-800 mb-4">
-          <div className="flex justify-between mb-3">
-            <h2 className="text-2xl font-black">
-              FLOOR READY
+        {/* CENTER */}
+        <div className="p-4 pb-40 xl:pb-10">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-4xl font-black">
+              Deliveries
             </h2>
 
-            <span className="text-orange-500 font-black text-2xl">
-              {
-                truck.floorReadyCount
-              }
-              /{truck.maxPallets}
-            </span>
+            <div className="hidden xl:flex items-center gap-3">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-3">
+                <span className="text-zinc-500 text-sm">
+                  TOTAL PALLETS
+                </span>
+
+                <h3 className="text-2xl font-black mt-1">
+                  {pallets.length}
+                </h3>
+              </div>
+            </div>
           </div>
 
-          <div className="w-full bg-zinc-800 rounded-full h-5 overflow-hidden">
-            <div
-              className="bg-orange-500 h-full"
-              style={{
-                width: `${progress}%`,
-              }}
-            />
-          </div>
-        </div>
+          <div className="space-y-4">
+            {deliveries.map(
+              (delivery) => (
+                <div
+                  key={delivery._id}
+                  className="bg-zinc-900 rounded-3xl p-5 border border-zinc-800"
+                >
+                  <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
 
-        <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-800">
-          <div className="flex justify-between mb-3">
-            <h2 className="text-2xl font-black">
-              LOADED
-            </h2>
+                    <div>
+                      <p className="text-zinc-500 text-xs">
+                        DELIVERY
+                      </p>
 
-            <span className="text-green-400 font-black text-2xl">
-              {loadedCount}/
-              {truck.maxPallets}
-            </span>
-          </div>
+                      <h2 className="text-2xl xl:text-3xl font-black text-orange-500">
+                        {delivery.deliveryNumber}
+                      </h2>
 
-          <div className="w-full bg-zinc-800 rounded-full h-5 overflow-hidden">
-            <div
-              className="bg-green-500 h-full"
-              style={{
-                width: `${loadingProgress}%`,
-              }}
-            />
-          </div>
-        </div>
-      </div>
+                      <p className="text-zinc-300 mt-1">
+                        {delivery.customerName}
+                      </p>
+                    </div>
 
-      {/* DELIVERIES */}
-      <div className="p-4">
-        <h2 className="text-3xl font-black mb-4">
-          Deliveries
-        </h2>
+                    <div className="flex items-center gap-3 flex-wrap">
 
-        <div className="space-y-4">
-          {deliveries.map(
-            (delivery) => (
-              <div
-                key={delivery._id}
-                className="bg-zinc-900 rounded-3xl p-5 border border-zinc-800"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-zinc-500 text-sm">
-                      DELIVERY
-                    </p>
+                      <div className="bg-zinc-800 rounded-2xl px-4 py-3">
+                        <p className="text-zinc-500 text-xs">
+                          FLOOR
+                        </p>
 
-                    <h2 className="text-3xl font-black text-orange-500">
-                      {
-                        delivery.deliveryNumber
-                      }
-                    </h2>
+                        <h3 className="text-xl font-black text-orange-500 mt-1">
+                          {delivery.floorPallets}
+                        </h3>
+                      </div>
 
-                    <p className="text-zinc-300 mt-2">
-                      {
-                        delivery.customerName
-                      }
-                    </p>
-                  </div>
+                      <div className="bg-zinc-800 rounded-2xl px-4 py-3">
+                        <p className="text-zinc-500 text-xs">
+                          BULK
+                        </p>
 
-                  <div
-                    className={`px-4 py-2 rounded-xl font-bold ${
-                      delivery.status ===
-                      'COMPLETE'
-                        ? 'bg-green-500'
-                        : delivery.status ===
-                          'WAITING_BULK'
-                        ? 'bg-yellow-500 text-black'
-                        : 'bg-blue-500'
-                    }`}
-                  >
-                    {
-                      delivery.status
-                    }
-                  </div>
-                </div>
+                        <h3 className="text-xl font-black text-yellow-400 mt-1">
+                          {delivery.bulkPallets}
+                        </h3>
+                      </div>
 
-                {/* PALLETS */}
-                <div className="mt-5 grid grid-cols-2 gap-3">
-                  {pallets
-                    .filter(
-                      (p) =>
-                        p.deliveryNumber ===
-                        delivery.deliveryNumber
-                    )
-                    .map((pallet) => (
+                      <div className="bg-zinc-800 rounded-2xl px-4 py-3">
+                        <p className="text-zinc-500 text-xs">
+                          LOADED
+                        </p>
+
+                        <h3 className="text-xl font-black text-green-400 mt-1">
+                          {delivery.loadedPallets}
+                        </h3>
+                      </div>
+
                       <div
-                        key={pallet._id}
-                        className={`rounded-2xl p-4 border ${
-                          pallet.status ===
-                          'LOADED'
-                            ? 'bg-green-500/10 border-green-500'
-                            : pallet.palletType ===
-                              'BULK'
-                            ? 'bg-yellow-500/10 border-yellow-500'
-                            : 'bg-zinc-800 border-zinc-700'
+                        className={`px-5 py-4 rounded-2xl font-black ${
+                          delivery.status ===
+                          'COMPLETE'
+                            ? 'bg-green-500'
+                            : delivery.status ===
+                              'WAITING_BULK'
+                            ? 'bg-yellow-500 text-black'
+                            : 'bg-blue-500'
                         }`}
                       >
-                        <p className="text-zinc-500 text-xs">
-                          {
-                            pallet.palletType
-                          }
-                        </p>
+                        {delivery.status}
+                      </div>
+                    </div>
+                  </div>
 
-                        <h3 className="text-3xl font-black text-orange-500 mt-1">
-                          #
-                          {
-                            pallet.last4Digits
-                          }
-                        </h3>
-
-                        <p
-                          className={`mt-3 font-bold ${
+                  {/* PALLETS */}
+                  <div className="mt-5 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+                    {pallets
+                      .filter(
+                        (p) =>
+                          p.deliveryNumber ===
+                          delivery.deliveryNumber
+                      )
+                      .map((pallet) => (
+                        <div
+                          key={pallet._id}
+                          className={`rounded-2xl p-4 border ${
                             pallet.status ===
                             'LOADED'
-                              ? 'text-green-400'
+                              ? 'bg-green-500/10 border-green-500'
                               : pallet.palletType ===
                                 'BULK'
-                              ? 'text-yellow-400'
-                              : 'text-orange-400'
+                              ? 'bg-yellow-500/10 border-yellow-500'
+                              : 'bg-zinc-800 border-zinc-700'
                           }`}
                         >
-                          {pallet.status}
-                        </p>
+                          <p className="text-zinc-500 text-xs">
+                            {pallet.palletType}
+                          </p>
 
-                        <p className="text-zinc-600 text-xs mt-2 break-all">
-                          {
-                            pallet.palletCode
-                          }
-                        </p>
-                      </div>
-                    ))}
-                </div>
+                          <h3 className="text-2xl xl:text-3xl font-black text-orange-500 mt-1">
+                            #{pallet.last4Digits}
+                          </h3>
 
-                {/* COUNTS */}
-                <div className="grid grid-cols-3 gap-3 mt-5">
-                  <div className="bg-zinc-800 rounded-2xl p-3">
-                    <p className="text-zinc-500 text-xs">
-                      FLOOR
-                    </p>
-
-                    <h3 className="text-2xl font-black text-orange-500 mt-2">
-                      {
-                        delivery.floorPallets
-                      }
-                    </h3>
+                          <p
+                            className={`mt-2 font-bold text-sm ${
+                              pallet.status ===
+                              'LOADED'
+                                ? 'text-green-400'
+                                : pallet.palletType ===
+                                  'BULK'
+                                ? 'text-yellow-400'
+                                : 'text-orange-400'
+                            }`}
+                          >
+                            {pallet.status}
+                          </p>
+                        </div>
+                      ))}
                   </div>
 
-                  <div className="bg-zinc-800 rounded-2xl p-3">
-                    <p className="text-zinc-500 text-xs">
-                      BULK
-                    </p>
-
-                    <h3 className="text-2xl font-black text-yellow-400 mt-2">
-                      {
-                        delivery.bulkPallets
-                      }
-                    </h3>
-                  </div>
-
-                  <div className="bg-zinc-800 rounded-2xl p-3">
-                    <p className="text-zinc-500 text-xs">
-                      LOADED
-                    </p>
-
-                    <h3 className="text-2xl font-black text-green-400 mt-2">
-                      {
-                        delivery.loadedPallets
-                      }
-                    </h3>
-                  </div>
-                </div>
-
-                {/* ACTIONS */}
-                {!loadingMode && (
-                  <div className="grid grid-cols-2 gap-3 mt-5">
-                    <button
-                      onClick={() => {
-                        setSelectedDelivery(
-                          delivery
-                        );
-
-                        setBulkMode(true);
-
-                        setShowScanner(
-                          true
-                        );
-                      }}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-black py-4 rounded-2xl font-black text-xl"
-                    >
-                      SCAN BULK
-                    </button>
-
-                    {delivery.bulkPallets >
-                      0 && (
+                  {!loadingMode && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
                       <button
-                        onClick={() =>
-                          markBulkReady(
-                            delivery._id
-                          )
-                        }
-                        className="bg-orange-500 hover:bg-orange-600 py-4 rounded-2xl font-black text-xl"
+                        onClick={() => {
+                          setSelectedDelivery(
+                            delivery
+                          );
+
+                          setBulkMode(true);
+
+                          setShowScanner(
+                            true
+                          );
+                        }}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-black py-4 rounded-2xl font-black text-lg"
                       >
-                        BULK ARRIVED
+                        SCAN BULK
                       </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          )}
+
+                      {delivery.bulkPallets >
+                        0 && (
+                        <button
+                          onClick={() =>
+                            markBulkReady(
+                              delivery._id
+                            )
+                          }
+                          className="bg-orange-500 hover:bg-orange-600 py-4 rounded-2xl font-black text-lg"
+                        >
+                          BULK ARRIVED
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            )}
+          </div>
         </div>
+
+        {/* RIGHT ACTION PANEL */}
+        <div className="hidden xl:block xl:sticky xl:top-0 xl:h-screen border-l border-zinc-800 bg-black p-4">
+          <div className="space-y-4">
+
+            {!loadingMode && (
+              <button
+                disabled={
+                  truck.bulkWaitingCount >
+                    0 ||
+                  truck.floorReadyCount <
+                    truck.maxPallets
+                }
+                onClick={startLoading}
+                className={`w-full py-5 rounded-3xl text-2xl font-black ${
+                  truck.bulkWaitingCount >
+                    0 ||
+                  truck.floorReadyCount <
+                    truck.maxPallets
+                    ? 'bg-zinc-800 text-zinc-500'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                START LOADING
+              </button>
+            )}
+
+            <button
+              onClick={() =>
+                setShowScanner(true)
+              }
+              className={`w-full py-6 rounded-3xl text-3xl font-black ${
+                loadingMode
+                  ? 'bg-green-600'
+                  : bulkMode
+                  ? 'bg-yellow-500 text-black'
+                  : 'bg-orange-500'
+              }`}
+            >
+              {loadingMode
+                ? 'VERIFY & LOAD'
+                : bulkMode
+                ? 'SCAN BULK'
+                : 'SCAN PALLET'}
+            </button>
+
+            <div className="bg-zinc-900 rounded-3xl border border-zinc-800 p-5">
+              <h3 className="text-2xl font-black mb-4">
+                LIVE STATUS
+              </h3>
+
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">
+                    Total Pallets
+                  </span>
+
+                  <span className="font-black">
+                    {pallets.length}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">
+                    Deliveries
+                  </span>
+
+                  <span className="font-black">
+                    {deliveries.length}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">
+                    Loaded
+                  </span>
+
+                  <span className="font-black text-green-400">
+                    {loadedCount}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
       </div>
 
-      {/* ACTION BAR */}
-      <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-zinc-800 p-4 space-y-3">
+      {/* MOBILE ACTION BAR */}
+      <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-black border-t border-zinc-800 p-4 space-y-3">
+
         {!loadingMode && (
           <button
             disabled={
@@ -785,7 +842,7 @@ const TruckDetailsPage = () => {
                 truck.maxPallets
             }
             onClick={startLoading}
-            className={`w-full py-6 rounded-3xl text-3xl font-black ${
+            className={`w-full py-5 rounded-3xl text-2xl font-black ${
               truck.bulkWaitingCount >
                 0 ||
               truck.floorReadyCount <
@@ -802,7 +859,7 @@ const TruckDetailsPage = () => {
           onClick={() =>
             setShowScanner(true)
           }
-          className={`w-full py-7 rounded-3xl text-4xl font-black ${
+          className={`w-full py-6 rounded-3xl text-3xl font-black ${
             loadingMode
               ? 'bg-green-600'
               : bulkMode
@@ -823,6 +880,7 @@ const TruckDetailsPage = () => {
         <KeypadModal
           title="DELIVERY NUMBER"
           value={deliveryNumber}
+          type="delivery"
           onClose={() =>
             setShowDeliveryPad(false)
           }
