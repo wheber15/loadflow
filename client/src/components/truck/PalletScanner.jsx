@@ -13,98 +13,59 @@ const PalletScanner = ({
   useEffect(() => {
     let scanner;
 
-    const startScanner =
-      async () => {
-        try {
-          scanner =
-            new Html5Qrcode(
-              'reader'
-            );
-
-          const cameras =
-            await Html5Qrcode.getCameras();
-
-          if (!cameras.length) {
-            alert(
-              'No camera found'
-            );
-
-            return;
-          }
-
-          /* BACK CAMERA */
-          const backCamera =
-            cameras.find(
-              (c) =>
-                c.label
-                  .toLowerCase()
-                  .includes('back')
-            ) || cameras[0];
-
-          await scanner.start(
-            backCamera.id,
+    const startScanner = async () => {
+      try {
+        scanner =
+          new Html5QrcodeScanner(
+            'reader',
             {
-              fps: 20,
+              fps: 10,
 
               qrbox: {
-                width: 350,
+                width: 320,
                 height: 180,
               },
 
               aspectRatio: 1.777,
 
-              disableFlip: false,
+              rememberLastUsedCamera: true,
 
-              experimentalFeatures: {
-                useBarCodeDetectorIfSupported: true,
-              },
+              supportedScanTypes: [0],
 
-              formatsToSupport: [
-                Html5QrcodeSupportedFormats.CODE_128,
-                Html5QrcodeSupportedFormats.CODE_39,
-                Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.EAN_8,
-              ],
+              showTorchButtonIfSupported: true,
             },
-
-            async (
-              decodedText
-            ) => {
-              navigator.vibrate?.(
-                200
-              );
-
-              try {
-                await scanner.stop();
-
-                onScan(
-                  decodedText
-                );
-              } catch (err) {
-                console.log(
-                  err
-                );
-              }
-            },
-
-            () => {}
+            false
           );
-        } catch (err) {
-          console.log(err);
 
-          alert(
-            'Scanner failed to start'
-          );
-        }
-      };
+        scanner.render(
+          async (decodedText) => {
+            navigator.vibrate?.(100);
+
+            try {
+              await scanner.clear();
+            } catch { }
+
+            onScan(decodedText);
+          },
+
+          () => { }
+        );
+      } catch (error) {
+        console.log(error);
+
+        alert(
+          'Scanner failed to start'
+        );
+      }
+    };
 
     startScanner();
 
     return () => {
       if (scanner) {
         scanner
-          .stop()
-          .catch(() => {});
+          .clear()
+          .catch(() => { });
       }
     };
   }, []);
