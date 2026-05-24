@@ -1,3 +1,5 @@
+// models/Truck.js
+
 import mongoose from 'mongoose';
 
 const truckSchema =
@@ -20,13 +22,43 @@ const truckSchema =
         required: true,
       },
 
+      /* =========================
+         SHIFT / LOAD DATE
+         USED FOR:
+         - DAILY DASHBOARD
+         - HISTORY
+         - FUTURE LOADS
+         - PRELOADS
+      ========================= */
       shiftDate: {
         type: String,
+        required: true,
         default: () => {
           return new Date()
             .toISOString()
             .split('T')[0];
         },
+      },
+
+      /* =========================
+         OPTIONAL SHIFT TYPE
+      ========================= */
+      shiftType: {
+        type: String,
+        enum: [
+          'DAY',
+          'NIGHT',
+          'PRELOAD',
+        ],
+        default: 'DAY',
+      },
+
+      /* =========================
+         LOAD STATE
+      ========================= */
+      isArchived: {
+        type: Boolean,
+        default: false,
       },
 
       maxPallets: {
@@ -54,6 +86,27 @@ const truckSchema =
         default: 0,
       },
 
+      /* =========================
+         DRIVER / DISPATCH
+      ========================= */
+      driverName: {
+        type: String,
+        default: '',
+      },
+
+      trailerNumber: {
+        type: String,
+        default: '',
+      },
+
+      dockNumber: {
+        type: String,
+        default: '',
+      },
+
+      /* =========================
+         STATUS
+      ========================= */
       status: {
         type: String,
         enum: [
@@ -71,13 +124,19 @@ const truckSchema =
       dispatchedAt: {
         type: Date,
       },
+
+      completedAt: {
+        type: Date,
+      },
     },
     {
       timestamps: true,
     }
   );
 
-/* GENERATE LOAD ID */
+/* =========================
+   GENERATE LOAD ID
+========================= */
 truckSchema.pre(
   'save',
   async function (next) {

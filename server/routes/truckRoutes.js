@@ -1,3 +1,5 @@
+// routes/truckRoutes.js
+
 import express from 'express';
 
 import {
@@ -9,16 +11,36 @@ import {
 
 const router = express.Router();
 
-/* GET ALL */
-router.get('/', getTrucks);
+/* =========================
+   GET ALL TRUCKS
+   SUPPORTS:
+   ?shiftDate=
+   ?history=
+========================= */
+router.get(
+  '/',
+  getTrucks
+);
 
-/* GET SINGLE */
-router.get('/:id', getTruckById);
+/* =========================
+   GET SINGLE TRUCK
+========================= */
+router.get(
+  '/:id',
+  getTruckById
+);
 
-/* CREATE */
-router.post('/', createTruck);
+/* =========================
+   CREATE TRUCK
+========================= */
+router.post(
+  '/',
+  createTruck
+);
 
-/* UPDATE STATUS */
+/* =========================
+   UPDATE STATUS
+========================= */
 router.patch(
   '/:id/status',
   updateTruckStatus

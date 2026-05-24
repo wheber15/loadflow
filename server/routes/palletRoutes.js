@@ -5,6 +5,7 @@ import express from 'express';
 import {
   checkPalletExists,
   scanPallet,
+  addBulkPallets,
   scanBulkPallet,
   getTruckPallets,
   loadPallet,
@@ -32,10 +33,18 @@ router.post(
 );
 
 /* =========================
-   SCAN BULK PALLET
+   ADD BULK EXPECTATION
 ========================= */
 router.post(
   '/bulk',
+  addBulkPallets
+);
+
+/* =========================
+   SCAN BULK PALLET
+========================= */
+router.post(
+  '/bulk-scan',
   scanBulkPallet
 );
 

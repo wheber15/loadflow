@@ -13,16 +13,32 @@ import CreateTruckModal from '../components/truck/CreateTruckModal';
 const DashboardPage = () => {
   const navigate = useNavigate();
 
+  const today =
+    new Date()
+      .toISOString()
+      .split('T')[0];
+
   const [trucks, setTrucks] =
     useState([]);
 
   const [showModal, setShowModal] =
     useState(false);
 
+  const [selectedDate, setSelectedDate] =
+    useState(today);
+
+  const [showHistory, setShowHistory] =
+    useState(false);
+
+  /* =========================
+     FETCH TRUCKS
+  ========================= */
   const fetchTrucks = async () => {
     try {
       const { data } =
-        await api.get('/trucks');
+        await api.get(
+          `/trucks?shiftDate=${selectedDate}&history=${showHistory}`
+        );
 
       const trucksWithCounts =
         await Promise.all(
@@ -85,6 +101,9 @@ const DashboardPage = () => {
     }
   };
 
+  /* =========================
+     SOCKETS
+  ========================= */
   useEffect(() => {
     fetchTrucks();
 
@@ -125,8 +144,38 @@ const DashboardPage = () => {
         'delivery:updated'
       );
     };
-  }, []);
+  }, [
+    selectedDate,
+    showHistory,
+  ]);
 
+  /* =========================
+     DATE NAVIGATION
+  ========================= */
+  const changeDate = (
+    direction
+  ) => {
+    const current =
+      new Date(selectedDate);
+
+    current.setDate(
+      current.getDate() +
+        direction
+    );
+
+    const nextDate =
+      current
+        .toISOString()
+        .split('T')[0];
+
+    setSelectedDate(
+      nextDate
+    );
+  };
+
+  /* =========================
+     STATUS COLORS
+  ========================= */
   const getStatusStyles = (
     truck
   ) => {
@@ -222,7 +271,9 @@ const DashboardPage = () => {
     };
   };
 
-  /* TOTALS */
+  /* =========================
+     TOTALS
+  ========================= */
   const totalPallets =
     trucks.reduce(
       (sum, t) =>
@@ -277,8 +328,80 @@ const DashboardPage = () => {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col xl:flex-row gap-3">
 
+            {/* DATE CONTROLS */}
+            <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-3xl p-2">
+
+              <button
+                onClick={() =>
+                  changeDate(-1)
+                }
+                className="bg-zinc-800 hover:bg-zinc-700 w-14 h-14 rounded-2xl text-2xl font-black"
+              >
+                ←
+              </button>
+
+              <input
+                type="date"
+                value={
+                  selectedDate
+                }
+                onChange={(e) =>
+                  setSelectedDate(
+                    e.target.value
+                  )
+                }
+                className="bg-transparent outline-none text-lg font-black px-2"
+              />
+
+              <button
+                onClick={() =>
+                  changeDate(1)
+                }
+                className="bg-zinc-800 hover:bg-zinc-700 w-14 h-14 rounded-2xl text-2xl font-black"
+              >
+                →
+              </button>
+
+            </div>
+
+            {/* ACTIVE / HISTORY */}
+            <div className="flex bg-zinc-900 border border-zinc-800 rounded-3xl p-2">
+
+              <button
+                onClick={() =>
+                  setShowHistory(
+                    false
+                  )
+                }
+                className={`px-6 py-4 rounded-2xl font-black transition ${
+                  !showHistory
+                    ? 'bg-orange-500'
+                    : 'bg-transparent'
+                }`}
+              >
+                ACTIVE
+              </button>
+
+              <button
+                onClick={() =>
+                  setShowHistory(
+                    true
+                  )
+                }
+                className={`px-6 py-4 rounded-2xl font-black transition ${
+                  showHistory
+                    ? 'bg-purple-500'
+                    : 'bg-transparent'
+                }`}
+              >
+                HISTORY
+              </button>
+
+            </div>
+
+            {/* ACTIONS */}
             <button
               onClick={() =>
                 fetchTrucks()
@@ -394,16 +517,34 @@ const DashboardPage = () => {
                 <div className="flex items-start justify-between gap-4">
 
                   <div className="min-w-0">
-                    <h2 className="text-3xl xl:text-4xl font-black truncate">
-                      TRUCK{' '}
-                      {
-                        truck.truckNumber
-                      }
-                    </h2>
+
+                    <div className="flex items-center gap-3 flex-wrap">
+
+                      <h2 className="text-3xl xl:text-4xl font-black truncate">
+                        TRUCK{' '}
+                        {
+                          truck.truckNumber
+                        }
+                      </h2>
+
+                      {truck.shiftType ===
+                        'PRELOAD' && (
+                        <span className="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-xl text-xs font-black">
+                          PRELOAD
+                        </span>
+                      )}
+
+                    </div>
 
                     <p className="text-zinc-300 mt-2 text-lg">
                       {
                         truck.routeName
+                      }
+                    </p>
+
+                    <p className="text-sm text-zinc-500 mt-2">
+                      {
+                        truck.shiftDate
                       }
                     </p>
 
@@ -412,6 +553,7 @@ const DashboardPage = () => {
                         truck.loadId
                       }
                     </p>
+
                   </div>
 
                   <span
@@ -419,6 +561,7 @@ const DashboardPage = () => {
                   >
                     {truck.status}
                   </span>
+
                 </div>
 
                 {/* COUNTS */}
@@ -517,7 +660,7 @@ const DashboardPage = () => {
 
                 </div>
 
-                {/* BOTTOM ACTION */}
+                {/* ACTION */}
                 <div className="mt-6">
                   <div className="bg-zinc-800 group-hover:bg-orange-500 transition-all rounded-2xl py-4 text-center font-black text-lg">
                     OPEN TRUCK
@@ -533,19 +676,24 @@ const DashboardPage = () => {
         {/* EMPTY */}
         {trucks.length === 0 && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-20 text-center mt-8">
+
             <h2 className="text-4xl font-black text-zinc-500">
-              NO ACTIVE LOADS
+              NO LOADS FOUND
             </h2>
 
             <p className="text-zinc-600 mt-3">
-              Create your first truck load
+              No trucks available for this date
             </p>
+
           </div>
         )}
 
         {/* MODAL */}
         {showModal && (
           <CreateTruckModal
+            selectedDate={
+              selectedDate
+            }
             onClose={() =>
               setShowModal(false)
             }

@@ -19,6 +19,8 @@ import PalletScanner from '../components/truck/PalletScanner';
 
 import KeypadModal from '../components/KeypadModal';
 
+import CustomerNameModal from '../components/truck/CustomerNameModal';
+
 const TruckDetailsPage = () => {
   const { id } = useParams();
 
@@ -49,6 +51,9 @@ const TruckDetailsPage = () => {
     useState(false);
 
   const [showCustomerPad, setShowCustomerPad] =
+    useState(false);
+
+  const [showBulkPad, setShowBulkPad] =
     useState(false);
 
   const [pendingPallet, setPendingPallet] =
@@ -171,6 +176,46 @@ const TruckDetailsPage = () => {
     };
 
   /* =========================
+     ADD BULK EXPECTATION
+  ========================= */
+  const addBulkQuantity =
+    async (quantity) => {
+      try {
+        await api.post(
+          '/pallets/bulk',
+          {
+            deliveryId:
+              selectedDelivery._id,
+            quantity:
+              Number(quantity),
+          }
+        );
+
+        toast.success(
+          `Bulk quantity set to ${quantity}`
+        );
+
+        fetchTruck();
+
+        fetchPallets();
+
+        fetchDeliveries();
+
+        setSelectedDelivery(
+          null
+        );
+
+        setShowBulkPad(false);
+      } catch (error) {
+        toast.error(
+          error.response?.data
+            ?.message ||
+            'Failed to add bulk'
+        );
+      }
+    };
+
+  /* =========================
      HANDLE SCAN
   ========================= */
   const handleScan = async (
@@ -193,8 +238,13 @@ const TruckDetailsPage = () => {
           200,
         ]);
 
+        const data =
+          error.response?.data;
+
         toast.error(
-          'PALLET ALREADY EXISTS'
+          data?.truckNumber
+            ? `PALLET IN TRUCK ${data.truckNumber}`
+            : 'PALLET ALREADY EXISTS'
         );
 
         setShowScanner(false);
@@ -202,6 +252,9 @@ const TruckDetailsPage = () => {
         return;
       }
 
+      /* =========================
+         LOADING MODE
+      ========================= */
       if (loadingMode) {
         await api.post(
           '/pallets/load',
@@ -228,9 +281,12 @@ const TruckDetailsPage = () => {
         return;
       }
 
+      /* =========================
+         BULK MODE
+      ========================= */
       if (bulkMode) {
         await api.post(
-          '/pallets/bulk',
+          '/pallets/bulk-scan',
           {
             palletCode,
             truckId: truck._id,
@@ -260,6 +316,9 @@ const TruckDetailsPage = () => {
         return;
       }
 
+      /* =========================
+         NORMAL FLOOR PALLET
+      ========================= */
       setPendingPallet(
         palletCode
       );
@@ -460,6 +519,17 @@ const TruckDetailsPage = () => {
               {truck.routeName}
             </p>
 
+            <p className="text-zinc-500 mt-3 text-sm">
+              {truck.shiftDate}
+            </p>
+
+            {truck.shiftType ===
+              'PRELOAD' && (
+              <div className="mt-3 bg-purple-500/20 border border-purple-500/30 text-purple-400 px-4 py-2 rounded-2xl font-black text-center">
+                PRELOAD
+              </div>
+            )}
+
             <div
               className={`mt-6 px-5 py-4 rounded-2xl text-center font-black text-xl ${
                 truck.status ===
@@ -476,6 +546,7 @@ const TruckDetailsPage = () => {
             >
               {truck.status}
             </div>
+
           </div>
 
           {/* STATS */}
@@ -520,97 +591,14 @@ const TruckDetailsPage = () => {
                 {deliveries.length}
               </h2>
             </div>
-          </div>
 
-          {/* PROGRESS */}
-          <div className="space-y-4 mt-4">
-
-            <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800">
-              <div className="flex justify-between mb-3">
-                <span className="font-black text-lg">
-                  FLOOR READY
-                </span>
-
-                <span className="text-orange-500 font-black text-lg">
-                  {truck.floorReadyCount}/{truck.maxPallets}
-                </span>
-              </div>
-
-              <div className="w-full bg-zinc-800 rounded-full h-5 overflow-hidden">
-                <div
-                  className="bg-orange-500 h-full"
-                  style={{
-                    width: `${progress}%`,
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800">
-              <div className="flex justify-between mb-3">
-                <span className="font-black text-lg">
-                  LOADED
-                </span>
-
-                <span className="text-green-400 font-black text-lg">
-                  {loadedCount}/{truck.maxPallets}
-                </span>
-              </div>
-
-              <div className="w-full bg-zinc-800 rounded-full h-5 overflow-hidden">
-                <div
-                  className="bg-green-500 h-full"
-                  style={{
-                    width: `${loadingProgress}%`,
-                  }}
-                />
-              </div>
-            </div>
           </div>
 
         </div>
 
-        {/* CENTER CONTENT */}
+        {/* CENTER */}
         <div className="p-4 pb-44 xl:pb-10">
 
-          <div className="flex items-center justify-between mb-6">
-
-            <div>
-              <h2 className="text-4xl xl:text-5xl font-black">
-                Deliveries
-              </h2>
-
-              <p className="text-zinc-500 mt-1">
-                Live warehouse loading monitor
-              </p>
-            </div>
-
-            <div className="hidden xl:flex items-center gap-4">
-
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4">
-                <p className="text-zinc-500 text-xs">
-                  TOTAL PALLETS
-                </p>
-
-                <h3 className="text-3xl font-black mt-1">
-                  {pallets.length}
-                </h3>
-              </div>
-
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4">
-                <p className="text-zinc-500 text-xs">
-                  CAPACITY
-                </p>
-
-                <h3 className="text-3xl font-black mt-1">
-                  {truck.maxPallets}
-                </h3>
-              </div>
-
-            </div>
-          </div>
-
-          {/* DELIVERIES */}
           <div className="space-y-5">
 
             {deliveries.map(
@@ -622,7 +610,7 @@ const TruckDetailsPage = () => {
 
                   <div className="xl:grid xl:grid-cols-[380px_1fr]">
 
-                    {/* DELIVERY INFO */}
+                    {/* DELIVERY */}
                     <div className="p-5 xl:border-r border-zinc-800">
 
                       <p className="text-zinc-500 text-xs">
@@ -637,7 +625,7 @@ const TruckDetailsPage = () => {
                         {delivery.customerName}
                       </p>
 
-                      {/* DELIVERY STATS */}
+                      {/* STATS */}
                       <div className="grid grid-cols-3 gap-3 mt-5">
 
                         <div className="bg-zinc-800 rounded-2xl p-4">
@@ -656,7 +644,9 @@ const TruckDetailsPage = () => {
                           </p>
 
                           <h3 className="text-2xl font-black text-yellow-400 mt-1">
-                            {delivery.bulkPallets}
+                            {delivery.scannedBulkPallets || 0}
+                            /
+                            {delivery.bulkPallets || 0}
                           </h3>
                         </div>
 
@@ -691,36 +681,74 @@ const TruckDetailsPage = () => {
                       {!loadingMode && (
                         <div className="grid grid-cols-1 gap-3 mt-5">
 
-                          <button
-                            onClick={() => {
-                              setSelectedDelivery(
-                                delivery
-                              );
-
-                              setBulkMode(true);
-
-                              setShowScanner(
-                                true
-                              );
-                            }}
-                            className="bg-yellow-500 hover:bg-yellow-600 transition text-black py-4 rounded-2xl font-black text-lg"
-                          >
-                            SCAN BULK
-                          </button>
-
-                          {delivery.bulkPallets >
-                            0 && (
+                          {/* ADD BULK */}
+                          {(!delivery.bulkPallets ||
+                            delivery.bulkPallets === 0) && (
                             <button
-                              onClick={() =>
-                                markBulkReady(
-                                  delivery._id
-                                )
-                              }
-                              className="bg-orange-500 hover:bg-orange-600 transition py-4 rounded-2xl font-black text-lg"
+                              onClick={() => {
+                                setSelectedDelivery(
+                                  delivery
+                                );
+
+                                setShowBulkPad(
+                                  true
+                                );
+                              }}
+                              className="bg-yellow-500 hover:bg-yellow-600 transition text-black py-4 rounded-2xl font-black text-lg"
                             >
-                              BULK ARRIVED
+                              ADD BULK
                             </button>
                           )}
+
+                          {/* SCAN BULK */}
+                          {delivery.bulkPallets >
+                            0 &&
+                            delivery.scannedBulkPallets <
+                              delivery.bulkPallets && (
+                              <button
+                                onClick={() => {
+                                  setSelectedDelivery(
+                                    delivery
+                                  );
+
+                                  setBulkMode(
+                                    true
+                                  );
+
+                                  setShowScanner(
+                                    true
+                                  );
+                                }}
+                                className="bg-yellow-500 hover:bg-yellow-600 transition text-black py-4 rounded-2xl font-black text-lg"
+                              >
+                                SCAN BULK (
+                                {
+                                  delivery.scannedBulkPallets
+                                }
+                                /
+                                {
+                                  delivery.bulkPallets
+                                }
+                                )
+                              </button>
+                            )}
+
+                          {/* BULK ARRIVED */}
+                          {delivery.bulkPallets >
+                            0 &&
+                            delivery.scannedBulkPallets ===
+                              delivery.bulkPallets && (
+                              <button
+                                onClick={() =>
+                                  markBulkReady(
+                                    delivery._id
+                                  )
+                                }
+                                className="bg-orange-500 hover:bg-orange-600 transition py-4 rounded-2xl font-black text-lg"
+                              >
+                                BULK ARRIVED
+                              </button>
+                            )}
 
                         </div>
                       )}
@@ -803,7 +831,7 @@ const TruckDetailsPage = () => {
 
         </div>
 
-        {/* RIGHT ACTION PANEL */}
+        {/* RIGHT PANEL */}
         <div className="hidden xl:block xl:sticky xl:top-0 xl:h-screen border-l border-zinc-800 bg-black p-4">
 
           <div className="space-y-4">
@@ -848,79 +876,6 @@ const TruckDetailsPage = () => {
                 ? 'SCAN BULK'
                 : 'SCAN PALLET'}
             </button>
-
-            {/* LIVE STATUS */}
-            <div className="bg-zinc-900 rounded-3xl border border-zinc-800 p-5">
-
-              <h3 className="text-2xl font-black mb-5">
-                LIVE STATUS
-              </h3>
-
-              <div className="space-y-4">
-
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">
-                    Total Pallets
-                  </span>
-
-                  <span className="font-black text-xl">
-                    {pallets.length}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">
-                    Deliveries
-                  </span>
-
-                  <span className="font-black text-xl">
-                    {deliveries.length}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">
-                    Loaded
-                  </span>
-
-                  <span className="font-black text-green-400 text-xl">
-                    {loadedCount}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">
-                    Truck Status
-                  </span>
-
-                  <span className="font-black text-orange-500">
-                    {truck.status}
-                  </span>
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* ACTIVITY PLACEHOLDER */}
-            <div className="bg-zinc-900 rounded-3xl border border-zinc-800 p-5">
-
-              <h3 className="text-2xl font-black mb-4">
-                ACTIVITY
-              </h3>
-
-              <div className="space-y-3">
-
-                <div className="bg-zinc-800 rounded-2xl p-4">
-                  <p className="text-sm text-zinc-400">
-                    Live warehouse events
-                    will appear here
-                  </p>
-                </div>
-
-              </div>
-
-            </div>
 
           </div>
 
@@ -971,6 +926,7 @@ const TruckDetailsPage = () => {
             ? 'SCAN BULK'
             : 'SCAN PALLET'}
         </button>
+
       </div>
 
       {/* DELIVERY NUMBER */}
@@ -1000,8 +956,7 @@ const TruckDetailsPage = () => {
 
       {/* CUSTOMER */}
       {showCustomerPad && (
-        <KeypadModal
-          title="CUSTOMER NAME"
+        <CustomerNameModal
           value={customerName}
           onClose={() =>
             setShowCustomerPad(false)
@@ -1023,6 +978,26 @@ const TruckDetailsPage = () => {
         />
       )}
 
+      {/* BULK QUANTITY */}
+      {showBulkPad && (
+        <KeypadModal
+          title="BULK QUANTITY"
+          value=""
+          onClose={() => {
+            setShowBulkPad(false);
+
+            setSelectedDelivery(
+              null
+            );
+          }}
+          onSubmit={(value) => {
+            addBulkQuantity(
+              value
+            );
+          }}
+        />
+      )}
+
       {/* SCANNER */}
       {showScanner && (
         <PalletScanner
@@ -1038,6 +1013,7 @@ const TruckDetailsPage = () => {
           }}
         />
       )}
+
     </div>
   );
 };

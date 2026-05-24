@@ -1,3 +1,5 @@
+// controllers/truckController.js
+
 import Truck from '../models/Truck.js';
 
 /* =========================
@@ -8,13 +10,51 @@ export const getTrucks = async (
   res
 ) => {
   try {
+    const {
+      shiftDate,
+      history,
+    } = req.query;
+
+    let query = {};
+
+    /* =========================
+       DATE FILTER
+    ========================= */
+    if (shiftDate) {
+      query.shiftDate =
+        shiftDate;
+    }
+
+    /* =========================
+       HISTORY FILTER
+    ========================= */
+    if (history === 'true') {
+      query.status = {
+        $in: [
+          'COMPLETE',
+          'DISPATCHED',
+        ],
+      };
+    } else {
+      query.status = {
+        $nin: [
+          'DISPATCHED',
+        ],
+      };
+    }
+
     const trucks =
-      await Truck.find().sort({
+      await Truck.find(
+        query
+      ).sort({
+        shiftDate: -1,
         createdAt: -1,
       });
 
     res.json(trucks);
   } catch (error) {
+    console.log(error);
+
     res.status(500).json({
       message:
         'Failed to fetch trucks',
@@ -33,6 +73,8 @@ export const createTruck = async (
     const {
       truckNumber,
       routeName,
+      shiftDate,
+      shiftType,
     } = req.body;
 
     /* VALIDATION */
@@ -46,10 +88,23 @@ export const createTruck = async (
       });
     }
 
-    /* ACTIVE TRUCK CHECK */
+    /* USE PROVIDED DATE OR TODAY */
+    const finalShiftDate =
+      shiftDate ||
+      new Date()
+        .toISOString()
+        .split('T')[0];
+
+    /* =========================
+       ACTIVE TRUCK CHECK
+       SAME TRUCK
+       SAME DATE
+    ========================= */
     const activeTruck =
       await Truck.findOne({
         truckNumber,
+        shiftDate:
+          finalShiftDate,
         status: {
           $in: [
             'BUILDING',
@@ -61,10 +116,10 @@ export const createTruck = async (
         },
       });
 
-    /* BLOCK DUPLICATE ACTIVE TRUCK */
+    /* BLOCK DUPLICATE */
     if (activeTruck) {
       return res.status(400).json({
-        message: `Truck ${truckNumber} already active`,
+        message: `Truck ${truckNumber} already active for ${finalShiftDate}`,
       });
     }
 
@@ -73,6 +128,11 @@ export const createTruck = async (
       await Truck.create({
         truckNumber,
         routeName,
+        shiftDate:
+          finalShiftDate,
+        shiftType:
+          shiftType ||
+          'DAY',
         maxPallets: 26,
         status: 'BUILDING',
       });
@@ -109,19 +169,45 @@ export const updateTruckStatus =
       truck.status =
         req.body.status;
 
-      /* DISPATCH TIME */
+      /* =========================
+         DISPATCHED
+      ========================= */
       if (
         req.body.status ===
         'DISPATCHED'
       ) {
         truck.dispatchedAt =
           new Date();
+
+        truck.isArchived =
+          true;
+      }
+
+      /* =========================
+         COMPLETE
+      ========================= */
+      if (
+        req.body.status ===
+        'COMPLETE'
+      ) {
+        truck.completedAt =
+          new Date();
       }
 
       await truck.save();
 
+      const io =
+        req.app.get('io');
+
+      io.emit(
+        'truck:updated',
+        truck
+      );
+
       res.json(truck);
     } catch (error) {
+      console.log(error);
+
       res.status(500).json({
         message:
           'Failed to update status',
@@ -149,6 +235,8 @@ export const getTruckById =
 
       res.json(truck);
     } catch (error) {
+      console.log(error);
+
       res.status(500).json({
         message:
           'Failed to fetch truck',

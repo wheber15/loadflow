@@ -73,10 +73,16 @@ const updateTruckStatus =
         0
       );
 
-    const totalBulk =
+    /* ONLY MISSING BULK */
+    const totalBulkWaiting =
       deliveries.reduce(
         (sum, d) =>
-          sum + d.bulkPallets,
+          sum +
+          Math.max(
+            d.bulkPallets -
+              d.scannedBulkPallets,
+            0
+          ),
         0
       );
 
@@ -91,7 +97,7 @@ const updateTruckStatus =
       totalFloor;
 
     truck.bulkWaitingCount =
-      totalBulk;
+      totalBulkWaiting;
 
     truck.loadedCount =
       totalLoaded;
@@ -100,12 +106,13 @@ const updateTruckStatus =
       deliveries.length;
 
     const totalActive =
-      totalFloor + totalBulk;
+      totalFloor +
+      totalBulkWaiting;
 
     if (totalActive === 0) {
       truck.status = 'EMPTY';
     } else if (
-      totalBulk > 0
+      totalBulkWaiting > 0
     ) {
       truck.status =
         'WAITING_BULK';
@@ -154,12 +161,21 @@ export const checkPalletExists =
       const existing =
         await Pallet.findOne({
           palletCode,
-        });
+        }).populate('truckId');
 
       if (existing) {
         return res.status(400).json({
           message:
-            'Pallet already exists',
+            `Pallet already assigned to Truck ${existing.truckId?.truckNumber || '?'}`,
+          truckNumber:
+            existing.truckId
+              ?.truckNumber,
+          routeName:
+            existing.truckId
+              ?.routeName,
+          shiftDate:
+            existing.truckId
+              ?.shiftDate,
         });
       }
 
@@ -225,12 +241,21 @@ export const scanPallet =
       const existingPallet =
         await Pallet.findOne({
           palletCode,
-        });
+        }).populate('truckId');
 
       if (existingPallet) {
         return res.status(400).json({
           message:
-            'Pallet already exists in system',
+            `Pallet already assigned to Truck ${existingPallet.truckId?.truckNumber || '?'}`,
+          truckNumber:
+            existingPallet.truckId
+              ?.truckNumber,
+          routeName:
+            existingPallet.truckId
+              ?.routeName,
+          shiftDate:
+            existingPallet.truckId
+              ?.shiftDate,
         });
       }
 
@@ -298,6 +323,7 @@ export const scanPallet =
             totalPallets: 0,
             floorPallets: 0,
             bulkPallets: 0,
+            scannedBulkPallets: 0,
             loadedPallets: 0,
             status: 'BUILDING',
           });
@@ -368,6 +394,68 @@ export const scanPallet =
   };
 
 /* =========================
+   ADD BULK EXPECTATION
+========================= */
+export const addBulkPallets =
+  async (req, res) => {
+    try {
+      const {
+        deliveryId,
+        quantity,
+      } = req.body;
+
+      const delivery =
+        await Delivery.findById(
+          deliveryId
+        );
+
+      if (!delivery) {
+        return res.status(404).json({
+          message:
+            'Delivery not found',
+        });
+      }
+
+      delivery.bulkPallets =
+        Number(quantity);
+
+      delivery.status =
+        'WAITING_BULK';
+
+      await delivery.save();
+
+      const updatedTruck =
+        await updateTruckStatus(
+          delivery.truckId
+        );
+
+      const io =
+        req.app.get('io');
+
+      io.emit(
+        'delivery:updated',
+        delivery
+      );
+
+      io.emit(
+        'truck:updated',
+        updatedTruck
+      );
+
+      res.json({
+        message:
+          'Bulk quantity added',
+        delivery,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message:
+          error.message,
+      });
+    }
+  };
+
+/* =========================
    SCAN BULK PALLET
 ========================= */
 export const scanBulkPallet =
@@ -394,12 +482,21 @@ export const scanBulkPallet =
       const existingPallet =
         await Pallet.findOne({
           palletCode,
-        });
+        }).populate('truckId');
 
       if (existingPallet) {
         return res.status(400).json({
           message:
-            'Pallet already exists in system',
+            `Pallet already assigned to Truck ${existingPallet.truckId?.truckNumber || '?'}`,
+          truckNumber:
+            existingPallet.truckId
+              ?.truckNumber,
+          routeName:
+            existingPallet.truckId
+              ?.routeName,
+          shiftDate:
+            existingPallet.truckId
+              ?.shiftDate,
         });
       }
 
@@ -413,6 +510,16 @@ export const scanBulkPallet =
         return res.status(404).json({
           message:
             'Delivery not found',
+        });
+      }
+
+      if (
+        delivery.scannedBulkPallets >=
+        delivery.bulkPallets
+      ) {
+        return res.status(400).json({
+          message:
+            'All bulk pallets already scanned',
         });
       }
 
@@ -435,10 +542,8 @@ export const scanBulkPallet =
           status: 'BULK',
         });
 
-      delivery.bulkPallets += 1;
+      delivery.scannedBulkPallets += 1;
       delivery.totalPallets += 1;
-      delivery.status =
-        'WAITING_BULK';
 
       await delivery.save();
 
@@ -502,6 +607,16 @@ export const markBulkArrived =
         });
       }
 
+      if (
+        delivery.scannedBulkPallets <
+        delivery.bulkPallets
+      ) {
+        return res.status(400).json({
+          message:
+            'Still waiting for bulk pallets',
+        });
+      }
+
       await Pallet.updateMany(
         {
           deliveryId,
@@ -513,10 +628,12 @@ export const markBulkArrived =
         }
       );
 
-      delivery.floorPallets +=
-        delivery.bulkPallets;
-
-      delivery.bulkPallets = 0;
+      /* FIXED DOUBLE COUNT ISSUE */
+      delivery.floorPallets =
+        await Pallet.countDocuments({
+          deliveryId,
+          status: 'READY',
+        });
 
       delivery.status =
         'FLOOR_READY';
