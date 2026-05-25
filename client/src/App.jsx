@@ -18,6 +18,8 @@ import AdminHomePage from './pages/admin/AdminHomePage';
 
 import UserManagementPage from './pages/admin/UserManagementPage';
 
+import OfficeBulkPage from './pages/office/OfficeBulkPage';
+
 import ProtectedRoute from './components/layout/ProtectedRoute';
 
 import { useAuth } from './context/AuthContext';
@@ -87,6 +89,24 @@ function App() {
             roles={['ADMIN']}
           >
             <UserManagementPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* =========================
+         OFFICE BULK
+      ========================= */}
+
+      <Route
+        path="/office/bulk"
+        element={
+          <ProtectedRoute
+            roles={[
+              'ADMIN',
+              'MANAGER',
+            ]}
+          >
+            <OfficeBulkPage />
           </ProtectedRoute>
         }
       />

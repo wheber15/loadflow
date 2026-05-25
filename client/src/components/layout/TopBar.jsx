@@ -124,6 +124,22 @@ const TopBar = () => {
             </button>
           )}
 
+          {/* OFFICE BULK */}
+
+          {(isManager ||
+            isAdmin) && (
+            <button
+              onClick={() =>
+                navigate(
+                  '/office/bulk'
+                )
+              }
+              className="bg-zinc-900 hover:bg-zinc-800 px-5 py-3 rounded-2xl font-black transition-all"
+            >
+              OFFICE
+            </button>
+          )}
+
           {/* USERS */}
 
           {isAdmin && (
