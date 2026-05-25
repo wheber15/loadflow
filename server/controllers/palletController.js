@@ -191,6 +191,90 @@ export const checkPalletExists =
   };
 
 /* =========================
+   PICKER SCAN PALLET
+========================= */
+export const pickerScanPallet =
+  async (req, res) => {
+    try {
+      let {
+        palletCode,
+        deliveryNumber,
+        customerName,
+        pickerName,
+      } = req.body;
+
+      palletCode =
+        validateBarcode(
+          palletCode
+        );
+
+      if (!palletCode) {
+        return res.status(400).json({
+          message:
+            'Invalid barcode scan',
+        });
+      }
+
+      if (
+        !deliveryNumber ||
+        !customerName ||
+        !pickerName
+      ) {
+        return res.status(400).json({
+          message:
+            'Missing required fields',
+        });
+      }
+
+      const existing =
+        await Pallet.findOne({
+          palletCode,
+        });
+
+      if (existing) {
+        return res.status(400).json({
+          message:
+            'Pallet already scanned',
+        });
+      }
+
+      const last4Digits =
+        getLast4Digits(
+          palletCode
+        );
+
+      const pallet =
+        await Pallet.create({
+          palletCode,
+          last4Digits,
+          deliveryNumber,
+          customerName,
+          palletType: 'FLOOR',
+          status: 'SCANNED',
+        });
+
+      const io =
+        req.app.get('io');
+
+      io.emit(
+        'picker:pallet-scanned',
+        pallet
+      );
+
+      res.status(201).json(
+        pallet
+      );
+    } catch (error) {
+      console.log(error);
+
+      res.status(500).json({
+        message:
+          'Failed to scan pallet',
+      });
+    }
+  };
+
+/* =========================
    SCAN FLOOR PALLET
 ========================= */
 export const scanPallet =

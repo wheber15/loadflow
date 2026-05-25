@@ -8,6 +8,9 @@ import connectDB from './config/db.js';
 
 import truckRoutes from './routes/truckRoutes.js';
 import palletRoutes from './routes/palletRoutes.js';
+import floorRoutes from './routes/floorRoutes.js';
+import bulkRoutes from './routes/bulkRoutes.js';
+import pickingSessionRoutes from './routes/pickingSessionRoutes.js';
 
 dotenv.config();
 
@@ -25,27 +28,85 @@ const io = new Server(server, {
 
 app.set('io', io);
 
-app.use(cors());
-app.use(express.json());
-app.use('/api/pallets', palletRoutes);
+/* =========================
+   MIDDLEWARE
+========================= */
 
+app.use(cors());
+
+app.use(express.json());
+
+/* =========================
+   API ROUTES
+========================= */
+
+app.use(
+  '/api/trucks',
+  truckRoutes
+);
+
+app.use(
+  '/api/pallets',
+  palletRoutes
+);
+
+app.use(
+  '/api/floor',
+  floorRoutes
+);
+
+app.use(
+  '/api/bulk',
+  bulkRoutes
+);
+
+app.use(
+  '/api/picking-sessions',
+  pickingSessionRoutes
+);
+
+/* =========================
+   HEALTH CHECK
+========================= */
 
 app.get('/', (req, res) => {
-  res.send('LoadFlow API Running');
+  res.send(
+    'LoadFlow API Running'
+  );
 });
 
-app.use('/api/trucks', truckRoutes);
+/* =========================
+   SOCKET.IO
+========================= */
 
-io.on('connection', (socket) => {
-  console.log('Socket Connected:', socket.id);
+io.on(
+  'connection',
+  (socket) => {
+    console.log(
+      'Socket Connected:',
+      socket.id
+    );
 
-  socket.on('disconnect', () => {
-    console.log('Socket Disconnected');
-  });
-});
+    socket.on(
+      'disconnect',
+      () => {
+        console.log(
+          'Socket Disconnected'
+        );
+      }
+    );
+  }
+);
 
-const PORT = process.env.PORT || 5000;
+/* =========================
+   START SERVER
+========================= */
+
+const PORT =
+  process.env.PORT || 5000;
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(
+    `Server running on port ${PORT}`
+  );
 });

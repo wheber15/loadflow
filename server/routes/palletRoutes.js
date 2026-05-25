@@ -1,11 +1,9 @@
-// routes/palletRoutes.js
-
 import express from 'express';
 
 import {
   checkPalletExists,
+  pickerScanPallet,
   scanPallet,
-  addBulkPallets,
   scanBulkPallet,
   getTruckPallets,
   loadPallet,
@@ -25,6 +23,14 @@ router.post(
 );
 
 /* =========================
+   PICKER SCAN
+========================= */
+router.post(
+  '/picker-scan',
+  pickerScanPallet
+);
+
+/* =========================
    SCAN FLOOR PALLET
 ========================= */
 router.post(
@@ -33,18 +39,10 @@ router.post(
 );
 
 /* =========================
-   ADD BULK EXPECTATION
-========================= */
-router.post(
-  '/bulk',
-  addBulkPallets
-);
-
-/* =========================
    SCAN BULK PALLET
 ========================= */
 router.post(
-  '/bulk-scan',
+  '/bulk',
   scanBulkPallet
 );
 
