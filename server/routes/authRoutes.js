@@ -5,6 +5,7 @@ import {
   logoutUser,
   createUser,
   getUsers,
+  updateUserActivity,
 } from '../controllers/authController.js';
 
 const router = express.Router();
@@ -43,6 +44,15 @@ router.post(
 router.get(
   '/',
   getUsers
+);
+
+/* =========================
+   UPDATE ACTIVITY
+========================= */
+
+router.put(
+  '/activity/:id',
+  updateUserActivity
 );
 
 export default router;

@@ -225,3 +225,54 @@ export const getUsers =
       });
     }
   };
+
+  /* =========================
+   UPDATE USER ACTIVITY
+========================= */
+
+export const updateUserActivity =
+  async (req, res) => {
+    try {
+      const user =
+        await User.findById(
+          req.params.id
+        );
+
+      if (!user) {
+        return res.status(404).json({
+          message:
+            'User not found',
+        });
+      }
+
+      const {
+        currentPage,
+        activeOrder,
+      } = req.body;
+
+      user.currentPage =
+        currentPage || '';
+
+      user.activeOrder =
+        activeOrder || '';
+
+      user.lastActivityAt =
+        new Date();
+
+      user.isOnline = true;
+
+      await user.save();
+
+      res.json({
+        message:
+          'Activity updated',
+      });
+    } catch (error) {
+      console.log(error);
+
+      res.status(500).json({
+        message:
+          'Failed to update activity',
+      });
+    }
+  };

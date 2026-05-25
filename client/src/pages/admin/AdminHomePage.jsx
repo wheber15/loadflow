@@ -2,6 +2,10 @@ import {
   Link,
 } from 'react-router-dom';
 
+import {
+  useEffect,
+} from 'react';
+
 import { useAuth } from '../../context/AuthContext';
 
 import TopBar from '../../components/layout/TopBar';
@@ -10,6 +14,7 @@ const cards = [
   {
     title: 'Floor Control',
     path: '/floor',
+
     roles: [
       'SUPERVISOR',
       'MANAGER',
@@ -23,6 +28,7 @@ const cards = [
   {
     title: 'Picker Mode',
     path: '/picker',
+
     roles: [
       'PICKER',
       'ADMIN',
@@ -35,6 +41,7 @@ const cards = [
   {
     title: 'Dashboard',
     path: '/dashboard',
+
     roles: [
       'MANAGER',
       'ADMIN',
@@ -47,6 +54,7 @@ const cards = [
   {
     title: 'Truck Management',
     path: '/',
+
     roles: [
       'SUPERVISOR',
       'MANAGER',
@@ -60,6 +68,7 @@ const cards = [
   {
     title: 'User Management',
     path: '/admin/users',
+
     roles: ['ADMIN'],
 
     description:
@@ -68,8 +77,24 @@ const cards = [
 ];
 
 const AdminHomePage = () => {
-  const { user } =
-    useAuth();
+  const {
+    user,
+    updateActivity,
+  } = useAuth();
+
+  /* =========================
+     LIVE ACTIVITY
+  ========================= */
+
+  useEffect(() => {
+    updateActivity(
+      'ADMIN'
+    );
+  }, []);
+
+  /* =========================
+     ROLE FILTER
+  ========================= */
 
   const allowedCards =
     cards.filter((card) =>

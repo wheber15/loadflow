@@ -5,6 +5,8 @@ import {
   useState,
 } from 'react';
 
+import api from '../api/axios';
+
 const AuthContext =
   createContext();
 
@@ -48,13 +50,63 @@ export const AuthProvider = ({
      LOGOUT
   ========================= */
 
-  const logout = () => {
-    setUser(null);
+  const logout =
+    async () => {
+      try {
+        if (user?._id) {
+          await api.post(
+            `/auth/logout/${user._id}`
+          );
+        }
+      } catch (error) {
+        console.log(error);
+      }
 
-    localStorage.removeItem(
-      'loadflow_user'
-    );
-  };
+      setUser(null);
+
+      localStorage.removeItem(
+        'loadflow_user'
+      );
+    };
+
+  /* =========================
+     UPDATE ACTIVITY
+  ========================= */
+
+  const updateActivity =
+    async (
+      currentPage,
+      activeOrder = ''
+    ) => {
+      try {
+        if (!user?._id) return;
+
+        await api.put(
+          `/auth/activity/${user._id}`,
+          {
+            currentPage,
+            activeOrder,
+          }
+        );
+
+        const updatedUser = {
+          ...user,
+          currentPage,
+          activeOrder,
+        };
+
+        setUser(updatedUser);
+
+        localStorage.setItem(
+          'loadflow_user',
+          JSON.stringify(
+            updatedUser
+          )
+        );
+      } catch (error) {
+        console.log(error);
+      }
+    };
 
   return (
     <AuthContext.Provider
@@ -62,6 +114,7 @@ export const AuthProvider = ({
         user,
         login,
         logout,
+        updateActivity,
       }}
     >
       {children}
