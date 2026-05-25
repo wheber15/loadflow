@@ -57,7 +57,7 @@ const LoginPage = () => {
         ) {
           navigate('/floor');
         } else {
-          navigate('/');
+          navigate('/admin');
         }
       } catch (error) {
         console.log(error);
@@ -73,23 +73,29 @@ const LoginPage = () => {
     };
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-6">
-      <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl p-8">
+    <div className="min-h-screen bg-black text-white overflow-x-hidden flex items-center justify-center px-4 sm:px-6 py-8">
+      {/* WRAPPER */}
+
+      <div className="w-full max-w-md lg:max-w-lg bg-zinc-950 border border-zinc-800 rounded-[32px] p-5 sm:p-8 shadow-2xl">
         {/* LOGO */}
 
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-orange-500 flex items-center justify-center text-black text-2xl font-black">
+        <div className="flex items-center gap-3 sm:gap-5 mb-8 sm:mb-10">
+          {/* ICON */}
+
+          <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-3xl bg-orange-500 flex items-center justify-center text-black text-2xl sm:text-4xl font-black shrink-0">
             LF
           </div>
 
-          <div>
-            <h1 className="text-5xl font-black text-orange-500 leading-none">
+          {/* TEXT */}
+
+          <div className="min-w-0">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-orange-500 leading-none break-words">
               LOADFLOW
             </h1>
 
-            <p className="text-zinc-500 mt-1">
-              Warehouse
-              Execution System
+            <p className="text-zinc-500 mt-1 text-sm sm:text-base">
+              Warehouse Execution
+              System
             </p>
           </div>
         </div>
@@ -97,7 +103,7 @@ const LoginPage = () => {
         {/* USERNAME */}
 
         <div className="mb-5">
-          <label className="block mb-2 font-bold text-zinc-300">
+          <label className="block mb-2 font-bold text-zinc-300 text-sm sm:text-lg">
             Username
           </label>
 
@@ -110,14 +116,14 @@ const LoginPage = () => {
               )
             }
             placeholder="Enter username..."
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 text-2xl outline-none focus:border-orange-500"
+            className="w-full h-16 sm:h-20 bg-zinc-900 border border-zinc-800 rounded-3xl px-5 text-xl sm:text-3xl outline-none focus:border-orange-500 transition-all"
           />
         </div>
 
         {/* PIN */}
 
         <div className="mb-8">
-          <label className="block mb-2 font-bold text-zinc-300">
+          <label className="block mb-2 font-bold text-zinc-300 text-sm sm:text-lg">
             PIN
           </label>
 
@@ -130,7 +136,7 @@ const LoginPage = () => {
               )
             }
             placeholder="****"
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 text-2xl outline-none focus:border-orange-500"
+            className="w-full h-16 sm:h-20 bg-zinc-900 border border-zinc-800 rounded-3xl px-5 text-xl sm:text-3xl outline-none focus:border-orange-500 transition-all"
           />
         </div>
 
@@ -139,12 +145,21 @@ const LoginPage = () => {
         <button
           onClick={handleLogin}
           disabled={loading}
-          className="w-full bg-orange-500 hover:bg-orange-600 transition-all rounded-2xl py-4 text-2xl font-black text-black"
+          className="w-full h-16 sm:h-20 bg-orange-500 hover:bg-orange-600 active:scale-[0.99] transition-all rounded-3xl text-xl sm:text-4xl font-black text-black"
         >
           {loading
             ? 'LOGGING IN...'
             : 'LOGIN'}
         </button>
+
+        {/* FOOTER */}
+
+        <div className="mt-8 text-center">
+          <p className="text-zinc-600 text-xs sm:text-sm">
+            LoadFlow Warehouse
+            Control Platform
+          </p>
+        </div>
       </div>
     </div>
   );
