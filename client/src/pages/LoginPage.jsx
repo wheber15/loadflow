@@ -2,6 +2,8 @@ import { useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
+import toast from 'react-hot-toast';
+
 import api from '../api/axios';
 
 import { useAuth } from '../context/AuthContext';
@@ -29,7 +31,18 @@ const LoginPage = () => {
   const handleLogin =
     async () => {
       try {
+        if (!name || !pin) {
+          return toast.error(
+            'Enter username and PIN'
+          );
+        }
+
         setLoading(true);
+
+        const loadingToast =
+          toast.loading(
+            'Authenticating...'
+          );
 
         const { data } =
           await api.post(
@@ -40,11 +53,17 @@ const LoginPage = () => {
             }
           );
 
+        toast.dismiss(
+          loadingToast
+        );
+
         login(data);
 
-        /* =========================
-           ROLE REDIRECT
-        ========================= */
+        toast.success(
+          `Welcome ${data.name}`
+        );
+
+        /* ROLE REDIRECT */
 
         if (
           data.role ===
@@ -62,7 +81,7 @@ const LoginPage = () => {
       } catch (error) {
         console.log(error);
 
-        alert(
+        toast.error(
           error.response?.data
             ?.message ||
             'Login failed'
@@ -72,28 +91,51 @@ const LoginPage = () => {
       }
     };
 
+  /* =========================
+     ENTER KEY
+  ========================= */
+
+  const handleKeyDown =
+    (e) => {
+      if (
+        e.key === 'Enter'
+      ) {
+        handleLogin();
+      }
+    };
+
   return (
-    <div className="min-h-screen bg-black text-white overflow-x-hidden flex items-center justify-center px-4 sm:px-6 py-8">
-      {/* WRAPPER */}
+    <div className="min-h-screen bg-black overflow-hidden relative flex items-center justify-center px-4 py-8">
+      {/* BACKGROUND */}
 
-      <div className="w-full max-w-md lg:max-w-lg bg-zinc-950 border border-zinc-800 rounded-[32px] p-5 sm:p-8 shadow-2xl">
-        {/* LOGO */}
+      <div className="absolute inset-0">
+        <div className="absolute top-[-300px] left-[-300px] w-[700px] h-[700px] bg-orange-500/10 rounded-full blur-[150px]" />
 
-        <div className="flex items-center gap-3 sm:gap-5 mb-8 sm:mb-10">
-          {/* ICON */}
+        <div className="absolute bottom-[-300px] right-[-300px] w-[700px] h-[700px] bg-orange-500/5 rounded-full blur-[150px]" />
+      </div>
 
-          <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-3xl bg-orange-500 flex items-center justify-center text-black text-2xl sm:text-4xl font-black shrink-0">
-            LF
+      {/* CARD */}
+
+      <div className="relative z-10 w-full max-w-[560px] bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 rounded-[38px] p-6 sm:p-10 shadow-[0_20px_80px_rgba(0,0,0,0.55)]">
+        {/* HEADER */}
+
+        <div className="flex items-center gap-5 mb-10">
+          {/* LOGO */}
+
+          <div className="w-20 h-20 rounded-[28px] bg-orange-500 flex items-center justify-center shrink-0">
+            <span className="text-black font-black text-4xl">
+              LF
+            </span>
           </div>
 
           {/* TEXT */}
 
-          <div className="min-w-0">
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-orange-500 leading-none break-words">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-orange-500 font-black leading-none tracking-tight text-[42px] sm:text-[58px] whitespace-nowrap">
               LOADFLOW
             </h1>
 
-            <p className="text-zinc-500 mt-1 text-sm sm:text-base">
+            <p className="text-zinc-500 mt-2 text-sm sm:text-lg">
               Warehouse Execution
               System
             </p>
@@ -102,8 +144,8 @@ const LoginPage = () => {
 
         {/* USERNAME */}
 
-        <div className="mb-5">
-          <label className="block mb-2 font-bold text-zinc-300 text-sm sm:text-lg">
+        <div className="mb-6">
+          <label className="block text-zinc-300 font-bold mb-3 text-sm sm:text-lg">
             Username
           </label>
 
@@ -115,15 +157,34 @@ const LoginPage = () => {
                 e.target.value
               )
             }
+            onKeyDown={
+              handleKeyDown
+            }
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
             placeholder="Enter username..."
-            className="w-full h-16 sm:h-20 bg-zinc-900 border border-zinc-800 rounded-3xl px-5 text-xl sm:text-3xl outline-none focus:border-orange-500 transition-all"
+            className="
+              w-full
+              h-16 sm:h-20
+              rounded-3xl
+              bg-zinc-900
+              border border-zinc-800
+              px-6
+              text-xl sm:text-3xl
+              text-white
+              outline-none
+              transition-all
+              focus:border-orange-500
+              focus:bg-zinc-900
+            "
           />
         </div>
 
         {/* PIN */}
 
         <div className="mb-8">
-          <label className="block mb-2 font-bold text-zinc-300 text-sm sm:text-lg">
+          <label className="block text-zinc-300 font-bold mb-3 text-sm sm:text-lg">
             PIN
           </label>
 
@@ -135,8 +196,26 @@ const LoginPage = () => {
                 e.target.value
               )
             }
-            placeholder="****"
-            className="w-full h-16 sm:h-20 bg-zinc-900 border border-zinc-800 rounded-3xl px-5 text-xl sm:text-3xl outline-none focus:border-orange-500 transition-all"
+            onKeyDown={
+              handleKeyDown
+            }
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="••••"
+            className="
+              w-full
+              h-16 sm:h-20
+              rounded-3xl
+              bg-zinc-900
+              border border-zinc-800
+              px-6
+              text-xl sm:text-3xl
+              text-white
+              outline-none
+              transition-all
+              focus:border-orange-500
+              focus:bg-zinc-900
+            "
           />
         </div>
 
@@ -145,7 +224,19 @@ const LoginPage = () => {
         <button
           onClick={handleLogin}
           disabled={loading}
-          className="w-full h-16 sm:h-20 bg-orange-500 hover:bg-orange-600 active:scale-[0.99] transition-all rounded-3xl text-xl sm:text-4xl font-black text-black"
+          className="
+            w-full
+            h-16 sm:h-20
+            rounded-3xl
+            bg-orange-500
+            hover:bg-orange-600
+            active:scale-[0.99]
+            transition-all
+            font-black
+            text-black
+            text-2xl sm:text-4xl
+            disabled:opacity-70
+          "
         >
           {loading
             ? 'LOGGING IN...'

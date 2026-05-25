@@ -1,12 +1,30 @@
 import {
+  useState,
+} from 'react';
+
+import {
+  useLocation,
   useNavigate,
 } from 'react-router-dom';
+
+import {
+  Menu,
+  X,
+} from 'lucide-react';
+
+import toast from 'react-hot-toast';
 
 import { useAuth } from '../../context/AuthContext';
 
 const TopBar = () => {
   const navigate =
     useNavigate();
+
+  const location =
+    useLocation();
+
+  const [menuOpen, setMenuOpen] =
+    useState(false);
 
   const {
     user,
@@ -19,13 +37,25 @@ const TopBar = () => {
 
   const handleLogout =
     async () => {
-      await logout();
+      try {
+        await logout();
 
-      navigate('/login');
+        toast.success(
+          'Logged out successfully'
+        );
+
+        navigate('/login');
+      } catch (error) {
+        console.log(error);
+
+        toast.error(
+          'Logout failed'
+        );
+      }
     };
 
   /* =========================
-     ROLE NAVIGATION
+     ROLES
   ========================= */
 
   const isPicker =
@@ -44,152 +74,273 @@ const TopBar = () => {
     user?.role ===
     'ADMIN';
 
+  /* =========================
+     NAV BUTTON
+  ========================= */
+
+  const NavButton = ({
+    label,
+    path,
+  }) => {
+    const active =
+      location.pathname ===
+      path;
+
+    return (
+      <button
+        onClick={() => {
+          navigate(path);
+
+          setMenuOpen(false);
+        }}
+        className={`
+          px-5 py-3 rounded-2xl font-black transition-all whitespace-nowrap
+          ${
+            active
+              ? 'bg-orange-500 text-black'
+              : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+          }
+        `}
+      >
+        {label}
+      </button>
+    );
+  };
+
   return (
-    <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-5 mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-      {/* LEFT */}
+    <div className="sticky top-0 z-50 mb-6">
+      <div className="bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 rounded-[32px] p-4 sm:p-5 shadow-2xl">
+        {/* TOP */}
 
-      <div>
-        <h1 className="text-3xl font-black text-orange-500">
-          LOADFLOW
-        </h1>
+        <div className="flex items-center justify-between gap-4">
+          {/* LEFT */}
 
-        <p className="text-zinc-500">
-          Warehouse Execution
-          Platform
-        </p>
-      </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-black text-orange-500 leading-none truncate">
+              LOADFLOW
+            </h1>
 
-      {/* CENTER */}
+            <p className="text-zinc-500 text-xs sm:text-sm mt-1">
+              Warehouse Execution
+              Platform
+            </p>
+          </div>
 
-      {!isPicker && (
-        <div className="flex flex-wrap gap-3">
-          {/* HOME */}
+          {/* MOBILE MENU */}
 
-          <button
-            onClick={() =>
-              navigate(
-                '/admin'
-              )
-            }
-            className="bg-zinc-900 hover:bg-zinc-800 px-5 py-3 rounded-2xl font-black transition-all"
-          >
-            HOME
-          </button>
-
-          {/* FLOOR */}
-
-          {(isSupervisor ||
-            isManager ||
-            isAdmin) && (
+          {!isPicker && (
             <button
               onClick={() =>
-                navigate(
-                  '/floor'
+                setMenuOpen(
+                  !menuOpen
                 )
               }
-              className="bg-zinc-900 hover:bg-zinc-800 px-5 py-3 rounded-2xl font-black transition-all"
+              className="lg:hidden w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center"
             >
-              FLOOR
+              {menuOpen ? (
+                <X size={28} />
+              ) : (
+                <Menu size={28} />
+              )}
             </button>
           )}
 
-          {/* PICKER */}
+          {/* DESKTOP RIGHT */}
 
-          {isAdmin && (
+          <div className="hidden lg:flex items-center gap-4">
+            {/* USER */}
+
+            <div className="text-right">
+              <p className="font-black text-lg leading-none">
+                {user?.name}
+              </p>
+
+              <p className="text-zinc-500 text-sm mt-1">
+                {user?.role}
+              </p>
+            </div>
+
+            {/* STATUS */}
+
+            {isPicker && (
+              <div className="bg-green-500/20 border border-green-500 text-green-400 px-4 py-2 rounded-2xl font-black">
+                ACTIVE
+              </div>
+            )}
+
+            {/* LOGOUT */}
+
             <button
-              onClick={() =>
-                navigate(
-                  '/picker'
-                )
+              onClick={
+                handleLogout
               }
-              className="bg-zinc-900 hover:bg-zinc-800 px-5 py-3 rounded-2xl font-black transition-all"
+              className="bg-red-500 hover:bg-red-600 active:scale-[0.98] transition-all px-5 py-3 rounded-2xl font-black"
             >
-              PICKER
+              LOGOUT
             </button>
-          )}
-
-          {/* DASHBOARD */}
-
-          {(isManager ||
-            isAdmin) && (
-            <button
-              onClick={() =>
-                navigate(
-                  '/dashboard'
-                )
-              }
-              className="bg-zinc-900 hover:bg-zinc-800 px-5 py-3 rounded-2xl font-black transition-all"
-            >
-              DASHBOARD
-            </button>
-          )}
-
-          {/* OFFICE BULK */}
-
-          {(isManager ||
-            isAdmin) && (
-            <button
-              onClick={() =>
-                navigate(
-                  '/office/bulk'
-                )
-              }
-              className="bg-zinc-900 hover:bg-zinc-800 px-5 py-3 rounded-2xl font-black transition-all"
-            >
-              OFFICE
-            </button>
-          )}
-
-          {/* USERS */}
-
-          {isAdmin && (
-            <button
-              onClick={() =>
-                navigate(
-                  '/admin/users'
-                )
-              }
-              className="bg-zinc-900 hover:bg-zinc-800 px-5 py-3 rounded-2xl font-black transition-all"
-            >
-              USERS
-            </button>
-          )}
+          </div>
         </div>
-      )}
 
-      {/* RIGHT */}
+        {/* DESKTOP NAV */}
 
-      <div className="flex items-center justify-between gap-4">
-        {/* PICKER STATUS */}
+        {!isPicker && (
+          <div className="hidden lg:flex flex-wrap gap-3 mt-5">
+            <NavButton
+              label="HOME"
+              path="/admin"
+            />
 
-        {isPicker && (
-          <div className="bg-green-500/20 border border-green-500 text-green-400 px-4 py-2 rounded-2xl font-black">
-            ACTIVE
+            {(isSupervisor ||
+              isManager ||
+              isAdmin) && (
+              <NavButton
+                label="FLOOR"
+                path="/floor"
+              />
+            )}
+
+            {isAdmin && (
+              <NavButton
+                label="PICKER"
+                path="/picker"
+              />
+            )}
+
+            {(isManager ||
+              isAdmin) && (
+              <NavButton
+                label="DASHBOARD"
+                path="/dashboard"
+              />
+            )}
+
+            {(isManager ||
+              isAdmin) && (
+              <NavButton
+                label="OFFICE"
+                path="/office/bulk"
+              />
+            )}
+
+            {isAdmin && (
+              <NavButton
+                label="USERS"
+                path="/admin/users"
+              />
+            )}
           </div>
         )}
 
-        {/* USER */}
+        {/* MOBILE NAV */}
 
-        <div className="text-right">
-          <p className="font-black text-lg">
-            {user?.name}
-          </p>
+        {!isPicker &&
+          menuOpen && (
+            <div className="lg:hidden mt-5 border-t border-zinc-800 pt-5">
+              <div className="flex flex-col gap-3">
+                <NavButton
+                  label="HOME"
+                  path="/admin"
+                />
 
-          <p className="text-zinc-500 text-sm">
-            {user?.role}
-          </p>
-        </div>
+                {(isSupervisor ||
+                  isManager ||
+                  isAdmin) && (
+                  <NavButton
+                    label="FLOOR"
+                    path="/floor"
+                  />
+                )}
 
-        {/* LOGOUT */}
+                {isAdmin && (
+                  <NavButton
+                    label="PICKER"
+                    path="/picker"
+                  />
+                )}
 
-        <button
-          onClick={
-            handleLogout
-          }
-          className="bg-red-500 hover:bg-red-600 px-5 py-3 rounded-2xl font-black transition-all"
-        >
-          LOGOUT
-        </button>
+                {(isManager ||
+                  isAdmin) && (
+                  <NavButton
+                    label="DASHBOARD"
+                    path="/dashboard"
+                  />
+                )}
+
+                {(isManager ||
+                  isAdmin) && (
+                  <NavButton
+                    label="OFFICE"
+                    path="/office/bulk"
+                  />
+                )}
+
+                {isAdmin && (
+                  <NavButton
+                    label="USERS"
+                    path="/admin/users"
+                  />
+                )}
+
+                {/* MOBILE USER */}
+
+                <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-4 mt-3">
+                  <p className="font-black text-lg">
+                    {user?.name}
+                  </p>
+
+                  <p className="text-zinc-500 text-sm mt-1">
+                    {user?.role}
+                  </p>
+
+                  {isPicker && (
+                    <div className="mt-3 bg-green-500/20 border border-green-500 text-green-400 px-4 py-2 rounded-2xl font-black inline-flex">
+                      ACTIVE
+                    </div>
+                  )}
+
+                  <button
+                    onClick={
+                      handleLogout
+                    }
+                    className="w-full mt-4 bg-red-500 hover:bg-red-600 active:scale-[0.98] transition-all py-3 rounded-2xl font-black"
+                  >
+                    LOGOUT
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        {/* PICKER MOBILE */}
+
+        {isPicker && (
+          <div className="flex items-center justify-between gap-4 mt-5 lg:hidden">
+            <div>
+              <p className="font-black text-lg leading-none">
+                {user?.name}
+              </p>
+
+              <p className="text-zinc-500 text-sm mt-1">
+                {user?.role}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="bg-green-500/20 border border-green-500 text-green-400 px-4 py-2 rounded-2xl font-black">
+                ACTIVE
+              </div>
+
+              <button
+                onClick={
+                  handleLogout
+                }
+                className="bg-red-500 hover:bg-red-600 active:scale-[0.98] transition-all px-5 py-3 rounded-2xl font-black"
+              >
+                LOGOUT
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
