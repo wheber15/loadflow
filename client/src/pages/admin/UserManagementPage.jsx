@@ -1,10 +1,19 @@
-import { useEffect, useState } from 'react';
+import {
+  useEffect,
+  useState,
+} from 'react';
 
 import api from '../../api/axios';
 
 import TopBar from '../../components/layout/TopBar';
 
+import { useAuth } from '../../context/AuthContext';
+
 const UserManagementPage = () => {
+  const {
+    updateActivity,
+  } = useAuth();
+
   const [users, setUsers] =
     useState([]);
 
@@ -42,8 +51,26 @@ const UserManagementPage = () => {
       }
     };
 
+  /* =========================
+     PAGE ACTIVITY
+  ========================= */
+
   useEffect(() => {
+    updateActivity(
+      'USER_MANAGEMENT'
+    );
+
     fetchUsers();
+
+    const interval =
+      setInterval(() => {
+        fetchUsers();
+      }, 5000);
+
+    return () =>
+      clearInterval(
+        interval
+      );
   }, []);
 
   /* =========================
@@ -203,19 +230,75 @@ const UserManagementPage = () => {
               key={user._id}
               className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6"
             >
+              {/* NAME */}
+
               <h2 className="text-3xl font-black">
                 {user.name}
               </h2>
+
+              {/* ROLE */}
 
               <div className="inline-flex mt-4 bg-orange-500 text-black px-4 py-2 rounded-2xl font-black">
                 {user.role}
               </div>
 
-              <div className="mt-5 flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              {/* ONLINE */}
 
-                <p className="text-zinc-400">
-                  ACTIVE
+              <div className="mt-5 flex items-center gap-3">
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    user.isOnline
+                      ? 'bg-green-500'
+                      : 'bg-red-500'
+                  }`}
+                ></div>
+
+                <p className="text-zinc-400 font-bold">
+                  {user.isOnline
+                    ? 'ONLINE'
+                    : 'OFFLINE'}
+                </p>
+              </div>
+
+              {/* PAGE */}
+
+              <div className="mt-5">
+                <p className="text-zinc-500 text-sm">
+                  Current Page
+                </p>
+
+                <p className="font-black mt-1">
+                  {user.currentPage ||
+                    '—'}
+                </p>
+              </div>
+
+              {/* ACTIVE ORDER */}
+
+              <div className="mt-5">
+                <p className="text-zinc-500 text-sm">
+                  Active Order
+                </p>
+
+                <p className="font-black mt-1">
+                  {user.activeOrder ||
+                    '—'}
+                </p>
+              </div>
+
+              {/* LAST ACTIVITY */}
+
+              <div className="mt-5">
+                <p className="text-zinc-500 text-sm">
+                  Last Activity
+                </p>
+
+                <p className="font-black mt-1 text-sm">
+                  {user.lastActivityAt
+                    ? new Date(
+                        user.lastActivityAt
+                      ).toLocaleString()
+                    : '—'}
                 </p>
               </div>
             </div>

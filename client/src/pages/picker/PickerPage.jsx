@@ -7,7 +7,18 @@ import api from '../../api/axios';
 
 import FloorSlotPicker from '../../components/floor/FloorSlotPicker';
 
+import PickerScannerModal from '../../components/picker/PickerScannerModal';
+
+import TopBar from '../../components/layout/TopBar';
+
+import { useAuth } from '../../context/AuthContext';
+
 const PickerPage = () => {
+  const {
+    user,
+    updateActivity,
+  } = useAuth();
+
   /* =========================
      SESSION
   ========================= */
@@ -20,11 +31,6 @@ const PickerPage = () => {
   /* =========================
      FORM
   ========================= */
-
-  const [
-    pickerName,
-    setPickerName,
-  ] = useState('');
 
   const [
     deliveryNumber,
@@ -46,6 +52,11 @@ const PickerPage = () => {
     setSelectedSlot,
   ] = useState('');
 
+  const [
+    showScanner,
+    setShowScanner,
+  ] = useState(false);
+
   /* =========================
      UI
   ========================= */
@@ -64,6 +75,16 @@ const PickerPage = () => {
     floorSlots,
     setFloorSlots,
   ] = useState([]);
+
+  /* =========================
+     LIVE ACTIVITY
+  ========================= */
+
+  useEffect(() => {
+    updateActivity(
+      'PICKER'
+    );
+  }, []);
 
   /* =========================
      FETCH FLOOR
@@ -93,7 +114,6 @@ const PickerPage = () => {
     async () => {
       try {
         if (
-          !pickerName ||
           !deliveryNumber ||
           !customerName
         ) {
@@ -106,13 +126,21 @@ const PickerPage = () => {
           await api.post(
             '/picking-sessions/start',
             {
-              pickerName,
+              pickerName:
+                user.name,
+
               deliveryNumber,
+
               customerName,
             }
           );
 
         setActiveSession(data);
+
+        updateActivity(
+          'PICKING',
+          deliveryNumber
+        );
 
         alert(
           'Picking session started'
@@ -161,10 +189,13 @@ const PickerPage = () => {
             '/pallets/picker-scan',
             {
               palletCode,
+
               deliveryNumber:
                 activeSession.deliveryNumber,
+
               customerName:
                 activeSession.customerName,
+
               pickerName:
                 activeSession.pickerName,
             }
@@ -195,10 +226,17 @@ const PickerPage = () => {
           '/floor/place',
           {
             slotId: slot._id,
+
             palletCode,
+
             pickerName:
               activeSession.pickerName,
           }
+        );
+
+        updateActivity(
+          'PICKING',
+          activeSession.deliveryNumber
         );
 
         /* =========================
@@ -244,6 +282,10 @@ const PickerPage = () => {
           `/picking-sessions/complete/${activeSession._id}`
         );
 
+        updateActivity(
+          'PICKER'
+        );
+
         alert(
           'Order completed'
         );
@@ -270,7 +312,12 @@ const PickerPage = () => {
 
   return (
     <div className="min-h-screen bg-black text-white p-6">
+      {/* TOPBAR */}
+
+      <TopBar />
+
       {/* HEADER */}
+
       <div className="mb-8">
         <h1 className="text-5xl font-black text-orange-500">
           PICKER MODE
@@ -283,10 +330,9 @@ const PickerPage = () => {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* LEFT */}
+
         <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
-          {/* =========================
-             ACTIVE SESSION
-          ========================= */}
+          {/* ACTIVE SESSION */}
 
           {activeSession ? (
             <div className="bg-orange-500 text-black rounded-3xl p-6 mb-6">
@@ -328,24 +374,19 @@ const PickerPage = () => {
           ) : (
             <div className="space-y-5 mb-6">
               {/* PICKER */}
+
               <div>
                 <label className="block mb-2 font-bold text-zinc-400">
-                  Picker Name
+                  Picker
                 </label>
 
-                <input
-                  value={pickerName}
-                  onChange={(e) =>
-                    setPickerName(
-                      e.target.value
-                    )
-                  }
-                  placeholder="Enter picker..."
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-2xl p-5 text-xl font-black outline-none"
-                />
+                <div className="w-full bg-zinc-900 border border-zinc-700 rounded-2xl p-5 text-xl font-black">
+                  {user.name}
+                </div>
               </div>
 
               {/* DELIVERY */}
+
               <div>
                 <label className="block mb-2 font-bold text-zinc-400">
                   Delivery Number
@@ -360,12 +401,13 @@ const PickerPage = () => {
                       e.target.value
                     )
                   }
-                  placeholder="Scan delivery..."
+                  placeholder="Add delivery number..."
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-2xl p-5 text-xl font-black outline-none"
                 />
               </div>
 
               {/* CUSTOMER */}
+
               <div>
                 <label className="block mb-2 font-bold text-zinc-400">
                   Customer Name
@@ -380,7 +422,7 @@ const PickerPage = () => {
                       e.target.value
                     )
                   }
-                  placeholder="Customer..."
+                  placeholder="Add Customer Name..."
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-2xl p-5 text-xl font-black outline-none"
                 />
               </div>
@@ -396,17 +438,18 @@ const PickerPage = () => {
             </div>
           )}
 
-          {/* =========================
-             SCAN AREA
-          ========================= */}
+          {/* SCAN AREA */}
 
           {activeSession && (
             <div className="space-y-5">
               {/* PALLET */}
+
               <div>
                 <label className="block mb-2 font-bold text-zinc-400">
                   Scan Pallet
                 </label>
+
+                {/* MANUAL INPUT */}
 
                 <input
                   value={palletCode}
@@ -418,9 +461,23 @@ const PickerPage = () => {
                   placeholder="Scan pallet barcode..."
                   className="w-full bg-orange-500/10 border-2 border-orange-500 rounded-2xl p-6 text-2xl font-black outline-none"
                 />
+
+                {/* CAMERA */}
+
+                <button
+                  onClick={() =>
+                    setShowScanner(
+                      true
+                    )
+                  }
+                  className="mt-4 w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 h-16 rounded-2xl text-xl font-black"
+                >
+                  OPEN CAMERA SCANNER
+                </button>
               </div>
 
-              {/* FLOOR PICKER */}
+              {/* SLOT PICKER */}
+
               <FloorSlotPicker
                 slots={floorSlots}
                 selectedSlot={
@@ -432,6 +489,7 @@ const PickerPage = () => {
               />
 
               {/* ACTIONS */}
+
               <div className="grid grid-cols-2 gap-4 pt-3">
                 <button
                   onClick={
@@ -459,6 +517,7 @@ const PickerPage = () => {
         </div>
 
         {/* RIGHT */}
+
         <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-3xl font-black">
@@ -512,6 +571,25 @@ const PickerPage = () => {
           </div>
         </div>
       </div>
+
+      {/* SCANNER MODAL */}
+
+      {showScanner && (
+        <PickerScannerModal
+          onClose={() =>
+            setShowScanner(
+              false
+            )
+          }
+          onScan={(code) => {
+            setPalletCode(code);
+
+            setShowScanner(
+              false
+            );
+          }}
+        />
+      )}
     </div>
   );
 };
