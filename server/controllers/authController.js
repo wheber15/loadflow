@@ -37,7 +37,7 @@ export const loginUser =
       }
 
       /* =========================
-         FORCE LOGOUT OLD SESSION
+         FORCE CLOSE OLD SESSION
       ========================= */
 
       user.isActiveSession =
@@ -59,16 +59,36 @@ export const loginUser =
       user.currentSessionId =
         sessionId;
 
+      user.isOnline = true;
+
       user.lastLoginAt =
         new Date();
+
+      user.lastActivityAt =
+        new Date();
+
+      user.currentPage =
+        'LOGIN';
 
       await user.save();
 
       res.json({
         _id: user._id,
+
         name: user.name,
+
         role: user.role,
+
         sessionId,
+
+        isOnline:
+          user.isOnline,
+
+        currentPage:
+          user.currentPage,
+
+        lastLoginAt:
+          user.lastLoginAt,
       });
     } catch (error) {
       console.log(error);
@@ -104,6 +124,15 @@ export const logoutUser =
 
       user.currentSessionId =
         '';
+
+      user.isOnline = false;
+
+      user.currentPage = '';
+
+      user.activeOrder = '';
+
+      user.lastLogoutAt =
+        new Date();
 
       await user.save();
 

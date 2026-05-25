@@ -3,9 +3,14 @@ import mongoose from 'mongoose';
 const userSchema =
   new mongoose.Schema(
     {
+      /* =========================
+         BASIC
+      ========================= */
+
       name: {
         type: String,
         required: true,
+        unique: true,
       },
 
       pin: {
@@ -24,6 +29,10 @@ const userSchema =
         default: 'PICKER',
       },
 
+      /* =========================
+         SESSION
+      ========================= */
+
       isActiveSession: {
         type: Boolean,
         default: false,
@@ -34,8 +43,49 @@ const userSchema =
         default: '',
       },
 
+      isOnline: {
+        type: Boolean,
+        default: false,
+      },
+
+      /* =========================
+         ACTIVITY
+      ========================= */
+
+      currentPage: {
+        type: String,
+        default: '',
+      },
+
+      activeOrder: {
+        type: String,
+        default: '',
+      },
+
       lastLoginAt: {
         type: Date,
+      },
+
+      lastLogoutAt: {
+        type: Date,
+      },
+
+      lastActivityAt: {
+        type: Date,
+      },
+
+      /* =========================
+         DEVICE
+      ========================= */
+
+      deviceName: {
+        type: String,
+        default: '',
+      },
+
+      terminalName: {
+        type: String,
+        default: '',
       },
     },
     {

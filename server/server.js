@@ -11,6 +11,7 @@ import palletRoutes from './routes/palletRoutes.js';
 import floorRoutes from './routes/floorRoutes.js';
 import bulkRoutes from './routes/bulkRoutes.js';
 import pickingSessionRoutes from './routes/pickingSessionRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 dotenv.config();
 
@@ -63,6 +64,11 @@ app.use(
 app.use(
   '/api/picking-sessions',
   pickingSessionRoutes
+);
+
+app.use(
+  '/api/auth',
+  authRoutes
 );
 
 /* =========================
